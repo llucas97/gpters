@@ -1,0 +1,43 @@
+# Task ID: 5
+# Title: 레벨테스트 시스템 구현
+# Status: pending
+# Dependencies: 1, 4
+# Priority: medium
+# Description: 시력검사식 레벨테스트 및 결과 기반 레벨 배정
+# Details:
+React에서 레벨테스트 인터페이스(0-5단계, 시력검사식 UI) 구현. 백엔드에서 테스트 결과 분석 및 레벨 배정 로직 구현.
+
+# Test Strategy:
+레벨테스트 진행, 결과 저장 및 레벨 배정 테스트
+
+# Subtasks:
+## 1. 시력검사식 레벨테스트 UI 구현 [pending]
+### Dependencies: None
+### Description: 시력검사 방식의 레벨테스트를 위한 사용자 인터페이스(UI)를 설계하고 구현합니다.
+### Details:
+시력검사 스타일의 UI를 설계하며, 각 단계별로 문제를 명확하게 표시하고, 접근성과 시각적 인지성을 고려합니다.
+
+## 2. 테스트 단계별 문제 설계 [pending]
+### Dependencies: 5.1
+### Description: 테스트의 각 단계에 맞는 문제를 난이도별로 설계합니다.
+### Details:
+초기 단계는 쉬운 문제로 시작하고, 단계가 올라갈수록 난이도와 문제 복잡도를 점진적으로 증가시킵니다.
+
+## 3. 결과 분석 로직 구현 [pending]
+### Dependencies: 5.2
+### Description: 사용자의 테스트 결과를 분석하는 로직을 개발합니다.
+### Details:
+정답률, 반응 속도, 오답 횟수 등 다양한 지표를 바탕으로 결과를 정량적으로 분석합니다.
+
+## 4. 레벨 배정 로직 구현 [pending]
+### Dependencies: 5.3
+### Description: 분석된 결과를 바탕으로 사용자의 레벨을 자동으로 배정하는 로직을 구현합니다.
+### Details:
+분석된 점수와 기준에 따라 적절한 레벨을 산출하고, 레벨별 피드백을 제공합니다.
+
+## 5. 테스트 및 결과 저장 기능 구현 [pending]
+### Dependencies: 5.4
+### Description: 테스트 진행 내역과 결과를 저장하는 기능을 개발합니다.
+### Details:
+사용자의 테스트 기록과 결과 데이터를 안전하게 저장하고, 필요 시 불러올 수 있도록 합니다.
+

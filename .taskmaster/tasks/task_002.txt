@@ -1,0 +1,43 @@
+# Task ID: 2
+# Title: 데이터베이스 스키마 설계 및 구현
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: 사용자, 문제, 리그, 통계 테이블 스키마 설계 및 데이터베이스 구현
+# Details:
+PostgreSQL에 사용자(개인정보, 레벨, 경험치, 출석 기록), 문제(내용, 난이도, 카테고리, 평가 점수), 리그(주간 순위, 참여자, 점수), 통계(학습 기록, 진도율, 성취도) 테이블 생성. Redis는 세션/캐싱용으로 별도 설정.
+
+# Test Strategy:
+각 테이블 생성 및 기본 CRUD 쿼리 테스트, Redis 연결 테스트
+
+# Subtasks:
+## 1. 테이블 스키마 설계 [pending]
+### Dependencies: None
+### Description: 사용자, 문제, 리그, 통계 테이블의 구조와 관계를 논리적으로 설계합니다.
+### Details:
+각 테이블의 필드, 데이터 타입, PK/FK, 관계(1:N, N:M 등)를 정의합니다.
+
+## 2. 테이블 생성 [pending]
+### Dependencies: 2.1
+### Description: 설계된 스키마를 기반으로 실제 데이터베이스에 테이블을 생성합니다.
+### Details:
+DDL(SQL) 문을 작성하여 DB에 사용자, 문제, 리그, 통계 테이블을 생성합니다.
+
+## 3. Redis 세션/캐싱 설정 [pending]
+### Dependencies: 2.2
+### Description: Redis를 활용하여 세션 관리 및 캐싱 환경을 구축합니다.
+### Details:
+Redis 서버 연결, 세션 저장소와 캐시 저장소 분리, TTL 등 캐시 정책을 설정합니다.
+
+## 4. 테이블별 CRUD 쿼리 작성 [pending]
+### Dependencies: 2.2
+### Description: 각 테이블(사용자, 문제, 리그, 통계)에 대해 CRUD 쿼리를 작성합니다.
+### Details:
+Create, Read, Update, Delete 쿼리를 SQL로 작성하고, 필요한 경우 Redis 캐시 연동 로직도 포함합니다.
+
+## 5. CRUD 쿼리 및 Redis 연동 테스트 [pending]
+### Dependencies: 2.3, 2.4
+### Description: 작성한 CRUD 쿼리와 Redis 세션/캐싱 동작을 실제로 테스트합니다.
+### Details:
+각 쿼리 실행 결과와 Redis 캐시/세션 동작을 검증하고, 문제 발생 시 수정합니다.
+

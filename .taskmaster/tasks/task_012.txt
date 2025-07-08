@@ -1,0 +1,43 @@
+# Task ID: 12
+# Title: OpenAI 기반 문제 생성 엔진 연동
+# Status: pending
+# Dependencies: 1, 2
+# Priority: medium
+# Description: OpenAI API(GPT-4) 연동 및 레벨별 맞춤 문제 자동 생성
+# Details:
+백엔드에서 OpenAI API 호출, 레벨/주제별 문제 생성 로직 구현. 생성된 문제는 문제 저장소에 저장.
+
+# Test Strategy:
+OpenAI API 호출 및 문제 생성, 저장 테스트
+
+# Subtasks:
+## 1. OpenAI API 연동 [pending]
+### Dependencies: None
+### Description: OpenAI API Key를 발급받고, 프로젝트에 API 연동을 위한 환경설정 및 인증을 진행합니다.
+### Details:
+OpenAI 회원가입, 결제수단 등록, API Key 발급 및 환경변수(.env) 설정, 라이브러리 설치 및 API 연동 코드 작성
+
+## 2. 레벨/주제별 문제 생성 로직 구현 [pending]
+### Dependencies: 12.1
+### Description: OpenAI API를 활용하여 레벨과 주제에 따라 문제를 생성하는 로직을 개발합니다.
+### Details:
+문제 생성에 필요한 프롬프트 설계, 레벨/주제별 파라미터 정의, API 호출 및 결과 파싱 로직 구현
+
+## 3. 문제 저장소 연동 [pending]
+### Dependencies: 12.2
+### Description: 생성된 문제를 저장할 데이터베이스 또는 파일 시스템과 연동합니다.
+### Details:
+DB 스키마 설계, 저장/조회/수정 API 구현, 문제 데이터 저장 로직 작성
+
+## 4. 생성 문제 검증 [pending]
+### Dependencies: 12.3
+### Description: 생성된 문제의 품질과 적합성을 검증하는 로직을 개발합니다.
+### Details:
+문제 내용 검증 기준 수립, 자동/수동 검증 프로세스 구현, 검증 결과 기록
+
+## 5. 문제 생성/저장 테스트 [pending]
+### Dependencies: 12.4
+### Description: 전체 문제 생성 및 저장 프로세스가 정상적으로 동작하는지 테스트합니다.
+### Details:
+테스트 케이스 작성, 실제 문제 생성 및 저장 시나리오 실행, 오류 및 예외 처리 확인
+

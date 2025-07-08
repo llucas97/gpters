@@ -1,0 +1,31 @@
+# Task ID: 15
+# Title: 모니터링 및 에러 추적 시스템 구축
+# Status: pending
+# Dependencies: 1
+# Priority: low
+# Description: Google Analytics, Sentry 연동 및 에러 추적 시스템 구축
+# Details:
+프론트엔드에 Google Analytics, Sentry 연동. 백엔드 로그 및 에러 추적 환경 설정.
+
+# Test Strategy:
+Google Analytics/Sentry 이벤트 전송 및 에러 추적 테스트
+
+# Subtasks:
+## 1. Google Analytics 연동 [pending]
+### Dependencies: None
+### Description: 프로젝트에 Google Analytics(GA4) 연동을 위한 서비스 계정 생성, API 활성화, credentials.json 발급 및 GA4 속성에 서비스 계정 추가를 진행합니다.
+### Details:
+GCP 콘솔에서 서비스 계정 생성 및 API 활성화, credentials.json 파일 다운로드, GA4 속성에 서비스 계정 이메일 추가, 연동 테스트 수행.
+
+## 2. Sentry 연동 [pending]
+### Dependencies: 15.1
+### Description: 프로젝트에 Sentry를 연동하여 프론트엔드 및 백엔드의 에러 추적 환경을 구축합니다.
+### Details:
+Sentry 프로젝트 생성, DSN 발급, 코드에 Sentry SDK 설치 및 초기화, 정상 동작 확인.
+
+## 3. 백엔드 로그/에러 추적 환경 설정 [pending]
+### Dependencies: 15.2
+### Description: 백엔드 서버에서 로그 및 에러 추적을 위한 환경을 구성하고, 필요 시 Sentry와 연동합니다.
+### Details:
+로그 관리 도구(예: Winston, Bunyan 등) 설정, 에러 핸들링 로직 구현, Sentry 연동 시 서버 측 SDK 적용 및 테스트.
+

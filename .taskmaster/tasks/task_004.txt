@@ -1,0 +1,37 @@
+# Task ID: 4
+# Title: 프로필 및 온보딩 설문조사 구현
+# Status: pending
+# Dependencies: 1, 3
+# Priority: medium
+# Description: 사용자 프로필 관리 및 4단계 설문조사 온보딩 구현
+# Details:
+React에서 프로필 관리 페이지, 설문조사(직업, 목적, 현재 레벨, 가입 동기) 폼 구현. 설문 결과를 백엔드에 저장.
+
+# Test Strategy:
+프로필 조회/수정, 설문조사 제출 및 결과 저장 테스트
+
+# Subtasks:
+## 1. 프로필 관리 UI 구현 [pending]
+### Dependencies: None
+### Description: 사용자가 자신의 프로필 정보를 조회, 수정할 수 있는 UI를 설계 및 개발합니다.
+### Details:
+프로필 정보 입력/수정 폼, 프로필 이미지 업로드, 저장 및 취소 버튼 등 포함. 프론트엔드 프레임워크(React 등)와 UI 라이브러리(Ant Design 등) 활용.
+
+## 2. 설문조사 폼(4단계) UI 구현 [pending]
+### Dependencies: 4.1
+### Description: 설문조사 진행 단계별(4단계) 폼 UI를 개발합니다.
+### Details:
+각 단계별 폼 구성, 단계 이동(이전/다음), 진행상황 표시(ProgressIndicator), 조건부 렌더링 폼 포함. 마지막 단계에서 전체 데이터 제출 기능 구현.
+
+## 3. 설문 결과 백엔드 저장 API 구현 [pending]
+### Dependencies: 4.2
+### Description: 설문조사 결과 데이터를 백엔드에 저장하는 API를 개발합니다.
+### Details:
+설문 응답 데이터 구조 설계, 데이터 유효성 검사, DB 저장 로직 구현. 프론트엔드와 연동되는 RESTful API 엔드포인트 제공.
+
+## 4. 프로필/설문 조회 및 수정 테스트 [pending]
+### Dependencies: 4.3
+### Description: 프로필 및 설문조사 데이터의 조회, 수정 기능을 통합적으로 테스트합니다.
+### Details:
+단위 테스트 및 통합 테스트 작성, 실제 데이터 흐름(입력-저장-조회-수정) 시나리오 검증. 프론트엔드와 백엔드 연동 테스트 포함.
+

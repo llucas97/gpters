@@ -1,0 +1,1003 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "프로젝트 저장소 및 초기 환경 설정",
+        "description": "프로젝트 저장소 생성 및 초기 환경(프론트엔드, 백엔드, 데이터베이스) 설정",
+        "details": "Git 저장소 생성, React 18 + TypeScript + Bootstrap 5 기반 프론트엔드 프로젝트 초기화, Node.js 18 + Express 4 기반 백엔드 프로젝트 초기화, PostgreSQL 및 Redis 환경 설정. Vercel 및 Railway 배포 환경 준비.",
+        "testStrategy": "저장소 생성 및 각 프로젝트 초기화 후, 기본 실행 및 빌드 테스트 수행",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Git 저장소 생성",
+            "description": "프로젝트 버전 관리를 위해 새로운 Git 저장소를 생성하고 초기화합니다.",
+            "dependencies": [],
+            "details": "로컬 또는 GitHub, GitLab 등 원격 저장소에서 저장소를 생성하고, .gitignore 파일을 추가합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "프론트엔드 프로젝트 초기화 (React 18 + TypeScript + Bootstrap 5)",
+            "description": "React 18, TypeScript, Bootstrap 5를 사용하여 프론트엔드 프로젝트를 초기화합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "create-react-app 또는 Next.js 등으로 프로젝트를 생성하고, TypeScript 및 Bootstrap 5를 설치 및 적용합니다.[1][2][3][4][5]",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "백엔드 프로젝트 초기화 (Node.js 18 + Express 4)",
+            "description": "Node.js 18과 Express 4를 사용하여 백엔드 프로젝트를 초기화합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "npm init으로 Node.js 프로젝트를 생성하고, Express 4를 설치합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "PostgreSQL 환경 설정",
+            "description": "백엔드에서 사용할 PostgreSQL 데이터베이스 환경을 설정합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "PostgreSQL 설치 및 데이터베이스/사용자 생성, 연결 테스트를 진행합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Redis 환경 설정",
+            "description": "캐시 및 세션 관리를 위한 Redis 환경을 설정합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "Redis 서버 설치 및 실행, Node.js에서 연결 테스트를 진행합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Vercel 및 Railway 배포 환경 준비",
+            "description": "프론트엔드는 Vercel, 백엔드는 Railway에 배포할 수 있도록 환경을 준비합니다.",
+            "dependencies": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "각 서비스에 프로젝트를 등록하고, 환경 변수 및 배포 설정을 구성합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "데이터베이스 스키마 설계 및 구현",
+        "description": "사용자, 문제, 리그, 통계 테이블 스키마 설계 및 데이터베이스 구현",
+        "details": "PostgreSQL에 사용자(개인정보, 레벨, 경험치, 출석 기록), 문제(내용, 난이도, 카테고리, 평가 점수), 리그(주간 순위, 참여자, 점수), 통계(학습 기록, 진도율, 성취도) 테이블 생성. Redis는 세션/캐싱용으로 별도 설정.",
+        "testStrategy": "각 테이블 생성 및 기본 CRUD 쿼리 테스트, Redis 연결 테스트",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "테이블 스키마 설계",
+            "description": "사용자, 문제, 리그, 통계 테이블의 구조와 관계를 논리적으로 설계합니다.",
+            "dependencies": [],
+            "details": "각 테이블의 필드, 데이터 타입, PK/FK, 관계(1:N, N:M 등)를 정의합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "테이블 생성",
+            "description": "설계된 스키마를 기반으로 실제 데이터베이스에 테이블을 생성합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "DDL(SQL) 문을 작성하여 DB에 사용자, 문제, 리그, 통계 테이블을 생성합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Redis 세션/캐싱 설정",
+            "description": "Redis를 활용하여 세션 관리 및 캐싱 환경을 구축합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "Redis 서버 연결, 세션 저장소와 캐시 저장소 분리, TTL 등 캐시 정책을 설정합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "테이블별 CRUD 쿼리 작성",
+            "description": "각 테이블(사용자, 문제, 리그, 통계)에 대해 CRUD 쿼리를 작성합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create, Read, Update, Delete 쿼리를 SQL로 작성하고, 필요한 경우 Redis 캐시 연동 로직도 포함합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "CRUD 쿼리 및 Redis 연동 테스트",
+            "description": "작성한 CRUD 쿼리와 Redis 세션/캐싱 동작을 실제로 테스트합니다.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "각 쿼리 실행 결과와 Redis 캐시/세션 동작을 검증하고, 문제 발생 시 수정합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "기본 인증 시스템 구현",
+        "description": "JWT 기반 인증 및 소셜 로그인(Google, Kakao, GitHub) 구현",
+        "details": "Node.js(Express)에서 JWT 토큰 발급/검증 로직 구현, passport.js 또는 직접 OAuth2 클라이언트로 소셜 로그인 연동. HTTPS 적용 및 토큰 관리 보안 강화.",
+        "testStrategy": "회원가입, 로그인, 소셜 로그인, 토큰 검증 테스트",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "JWT 기반 인증 로직 구현",
+            "description": "JWT(Json Web Token)를 이용한 인증 로직을 서버에 구현합니다. 사용자 인증 시 토큰을 발급하고, 요청 시 토큰을 검증하는 미들웨어를 작성합니다.",
+            "dependencies": [],
+            "details": "JWT 토큰 생성, 검증 함수 작성 및 미들웨어 적용. 사용자 정보와 토큰 페이로드 설계.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "소셜 로그인(Google, Kakao, GitHub) 연동",
+            "description": "Google, Kakao, GitHub OAuth2 인증을 연동하여 소셜 로그인을 구현합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "각 소셜 서비스의 OAuth2 클라이언트 등록, 인증 요청 및 콜백 처리, 사용자 정보 획득 및 JWT 발급 연동.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "passport.js 또는 OAuth2 클라이언트 설정",
+            "description": "passport.js 또는 직접 OAuth2 클라이언트 라이브러리를 설정하여 인증 전략을 구성합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "passport.js 설치 및 각 소셜 로그인 전략(Google, Kakao, GitHub) 등록, serialize/deserializeUser 구현.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "HTTPS 적용",
+            "description": "서버에 HTTPS를 적용하여 인증 및 데이터 전송 시 보안을 강화합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "SSL 인증서 준비 및 서버에 적용, 개발/운영 환경별 HTTPS 설정.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "토큰 관리 및 보안 강화",
+            "description": "JWT 토큰의 저장, 만료, 갱신, 탈취 방지 등 보안 강화를 위한 정책을 적용합니다.",
+            "dependencies": [
+              4
+            ],
+            "details": "토큰 만료시간 설정, refresh token 도입, 토큰 저장 위치(HTTPOnly 쿠키 등) 결정, CSRF/XSS 방지.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "회원가입/로그인/토큰 검증 테스트",
+            "description": "회원가입, 로그인, 토큰 검증 등 전체 인증 플로우에 대한 테스트를 수행합니다.",
+            "dependencies": [
+              5
+            ],
+            "details": "단위 테스트 및 통합 테스트 작성, 정상/비정상 케이스 검증, 소셜 로그인 및 JWT 인증 동작 확인.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "프로필 및 온보딩 설문조사 구현",
+        "description": "사용자 프로필 관리 및 4단계 설문조사 온보딩 구현",
+        "details": "React에서 프로필 관리 페이지, 설문조사(직업, 목적, 현재 레벨, 가입 동기) 폼 구현. 설문 결과를 백엔드에 저장.",
+        "testStrategy": "프로필 조회/수정, 설문조사 제출 및 결과 저장 테스트",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "프로필 관리 UI 구현",
+            "description": "사용자가 자신의 프로필 정보를 조회, 수정할 수 있는 UI를 설계 및 개발합니다.",
+            "dependencies": [],
+            "details": "프로필 정보 입력/수정 폼, 프로필 이미지 업로드, 저장 및 취소 버튼 등 포함. 프론트엔드 프레임워크(React 등)와 UI 라이브러리(Ant Design 등) 활용.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "설문조사 폼(4단계) UI 구현",
+            "description": "설문조사 진행 단계별(4단계) 폼 UI를 개발합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "각 단계별 폼 구성, 단계 이동(이전/다음), 진행상황 표시(ProgressIndicator), 조건부 렌더링 폼 포함. 마지막 단계에서 전체 데이터 제출 기능 구현.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "설문 결과 백엔드 저장 API 구현",
+            "description": "설문조사 결과 데이터를 백엔드에 저장하는 API를 개발합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "설문 응답 데이터 구조 설계, 데이터 유효성 검사, DB 저장 로직 구현. 프론트엔드와 연동되는 RESTful API 엔드포인트 제공.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "프로필/설문 조회 및 수정 테스트",
+            "description": "프로필 및 설문조사 데이터의 조회, 수정 기능을 통합적으로 테스트합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "단위 테스트 및 통합 테스트 작성, 실제 데이터 흐름(입력-저장-조회-수정) 시나리오 검증. 프론트엔드와 백엔드 연동 테스트 포함.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "레벨테스트 시스템 구현",
+        "description": "시력검사식 레벨테스트 및 결과 기반 레벨 배정",
+        "details": "React에서 레벨테스트 인터페이스(0-5단계, 시력검사식 UI) 구현. 백엔드에서 테스트 결과 분석 및 레벨 배정 로직 구현.",
+        "testStrategy": "레벨테스트 진행, 결과 저장 및 레벨 배정 테스트",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "시력검사식 레벨테스트 UI 구현",
+            "description": "시력검사 방식의 레벨테스트를 위한 사용자 인터페이스(UI)를 설계하고 구현합니다.",
+            "dependencies": [],
+            "details": "시력검사 스타일의 UI를 설계하며, 각 단계별로 문제를 명확하게 표시하고, 접근성과 시각적 인지성을 고려합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "테스트 단계별 문제 설계",
+            "description": "테스트의 각 단계에 맞는 문제를 난이도별로 설계합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "초기 단계는 쉬운 문제로 시작하고, 단계가 올라갈수록 난이도와 문제 복잡도를 점진적으로 증가시킵니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "결과 분석 로직 구현",
+            "description": "사용자의 테스트 결과를 분석하는 로직을 개발합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "정답률, 반응 속도, 오답 횟수 등 다양한 지표를 바탕으로 결과를 정량적으로 분석합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "레벨 배정 로직 구현",
+            "description": "분석된 결과를 바탕으로 사용자의 레벨을 자동으로 배정하는 로직을 구현합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "분석된 점수와 기준에 따라 적절한 레벨을 산출하고, 레벨별 피드백을 제공합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "테스트 및 결과 저장 기능 구현",
+            "description": "테스트 진행 내역과 결과를 저장하는 기능을 개발합니다.",
+            "dependencies": [
+              4
+            ],
+            "details": "사용자의 테스트 기록과 결과 데이터를 안전하게 저장하고, 필요 시 불러올 수 있도록 합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "문제 해결 시스템(레벨별 인터페이스) 구현",
+        "description": "레벨별 문제 해결 인터페이스(블록코딩, 빈칸채우기, 코드에디터) 구현",
+        "details": "React에서 레벨 0-1: 스크래치 기반 블록코딩, 레벨 2-3: 빈칸 채우기, 레벨 4-5: 직접 타이핑 코드 에디터 구현. 각 인터페이스별 문제 제출 및 평가 로직 연동.",
+        "testStrategy": "각 레벨별 문제 해결 인터페이스 동작 및 제출 테스트",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "레벨 0-1(블록코딩) 인터페이스 설계 및 구현",
+            "description": "블록코딩 방식의 문제 풀이 UI/UX를 설계하고, 드래그 앤 드롭 등 블록 조립 기능을 구현합니다.",
+            "dependencies": [],
+            "details": "사용자가 시각적으로 코드를 조립할 수 있도록 블록 요소, 연결 로직, 입력/출력 UI를 개발합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "레벨 2-3(빈칸채우기) 인터페이스 설계 및 구현",
+            "description": "빈칸 채우기(클로즈 테스트) 방식의 문제 풀이 UI/UX를 설계하고, 입력 필드 및 정답 검증 기능을 구현합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "문장 또는 코드 내 빈칸에 사용자가 직접 값을 입력할 수 있도록 인터페이스를 구성하고, 입력값 수집 및 표시 기능을 개발합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "레벨 4-5(코드에디터) 인터페이스 설계 및 구현",
+            "description": "실제 코드 에디터(문법 하이라이트, 자동완성 등) 기반의 문제 풀이 UI/UX를 설계하고 구현합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "코드 입력, 실행, 결과 확인이 가능한 에디터 환경을 제공하며, 다양한 언어 지원 및 에러 표시 기능을 포함합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "문제 제출 로직 구현",
+            "description": "각 레벨별로 사용자가 문제를 제출할 수 있는 로직을 구현합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "제출 버튼, 입력값/코드 수집, 서버 전송 및 제출 상태 표시 기능을 개발합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "평가 로직 구현",
+            "description": "제출된 답안을 자동으로 평가하는 로직을 구현합니다.",
+            "dependencies": [
+              4
+            ],
+            "details": "블록코딩, 빈칸채우기, 코드에디터 각각에 맞는 채점 알고리즘을 설계하고, 정답 비교 및 피드백 제공 기능을 개발합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "각 레벨별 테스트 및 검증",
+            "description": "레벨별로 구현된 인터페이스와 로직의 기능 테스트 및 검증을 수행합니다.",
+            "dependencies": [
+              5
+            ],
+            "details": "유저 시나리오 기반 테스트 케이스 작성, 버그 수정, UI/UX 개선 및 최종 검수 작업을 진행합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "출석체크 및 진도 관리 시스템 구현",
+        "description": "일일 문제 해결 추적 및 출석 현황 표시",
+        "details": "백엔드에서 사용자별 일일 문제 해결 기록 저장, 프론트엔드에서 출석 현황 및 진도 그래프 표시. 출석체크 로직 구현.",
+        "testStrategy": "문제 해결 시 출석체크 및 진도 업데이트 테스트",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          6
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "백엔드 출석 기록 저장 로직 구현",
+            "description": "백엔드 시스템에서 출석 기록을 저장하는 로직을 구현합니다.",
+            "dependencies": [],
+            "details": "데이터베이스 설계 및 API 연동을 포함합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "프론트엔드 출석 현황 UI 구현",
+            "description": "프론트엔드에서 출석 현황을 표시하는 UI를 구현합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "백엔드 API와의 통신을 포함합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "진도 그래프 구현",
+            "description": "진도를 시각화하는 그래프를 구현합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "데이터 분석 및 시각화 라이브러리를 활용합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "출석체크 및 진도 업데이트 테스트",
+            "description": "출석체크 및 진도 업데이트가 올바르게 작동하는지 테스트합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "모든 기능이 정상적으로 동작하는지 확인합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "경험치 및 레벨 시스템 구현",
+        "description": "지수 분배 경험치 시스템 및 레벨 진행 구현",
+        "details": "백엔드에서 문제 해결 시 경험치 계산(지수 분배 알고리즘), 레벨 업 조건 및 레벨 표시 로직 구현. 프론트엔드에서 레벨/경험치 표시.",
+        "testStrategy": "문제 해결 시 경험치/레벨 업데이트 및 표시 테스트",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          7
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "경험치 계산 알고리즘(지수 분배) 구현",
+            "description": "플레이어가 행동을 완료할 때마다 경험치를 지수적으로 분배하는 알고리즘을 구현합니다. 레벨이 오를수록 다음 레벨까지 필요한 경험치가 2배로 증가하는 구조를 적용합니다.",
+            "dependencies": [],
+            "details": "경험치 획득 시 현재 경험치에 추가하고, 경험치가 최대치에 도달하면 레벨업 조건을 확인할 수 있도록 설계합니다. 경험치 분배 공식 및 데이터 구조를 정의합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "레벨 업 조건 로직 구현",
+            "description": "누적 경험치가 현재 레벨의 최대 경험치 이상일 때 레벨이 오르는 로직을 구현합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "경험치가 최대치에 도달하면 레벨을 1 증가시키고, 남은 경험치는 다음 레벨로 이월합니다. 레벨업 시 필요한 경험치량을 2배로 증가시키는 등 조건을 적용합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "레벨/경험치 표시 UI 구현",
+            "description": "플레이어의 현재 레벨과 경험치, 다음 레벨까지 남은 경험치를 시각적으로 표시하는 UI를 구현합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "경험치 바, 레벨 숫자, 경험치 수치 등을 실시간으로 업데이트하여 사용자에게 보여줍니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "경험치/레벨 업데이트 테스트",
+            "description": "경험치 획득, 레벨업, 경험치 이월 등 전체 로직이 정상적으로 동작하는지 테스트합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "다양한 경험치 획득 상황을 시뮬레이션하여 레벨업 및 경험치 표시가 올바르게 작동하는지 검증합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "데이터 동기화 로직 구현",
+            "description": "경험치와 레벨 데이터가 서버 또는 로컬 저장소와 동기화되도록 로직을 구현합니다.",
+            "dependencies": [
+              4
+            ],
+            "details": "플레이어의 경험치와 레벨 정보가 앱 재시작, 서버 통신 등 다양한 상황에서 일관되게 유지되도록 데이터 저장 및 불러오기 기능을 추가합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "리그전 시스템 구현",
+        "description": "주간 리그전 및 실시간 랭킹 시스템 구현",
+        "details": "백엔드에서 주간 리그 생성/관리, 실시간 랭킹 업데이트(Socket.io). 프론트엔드에서 리그전 참여 및 랭킹 표시.",
+        "testStrategy": "리그전 생성/참여, 실시간 랭킹 업데이트 테스트",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          8
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "주간 리그 생성 로직 설계 및 구현",
+            "description": "매주 자동으로 새로운 리그를 생성하고, 리그의 시작/종료 시점을 관리하는 백엔드 로직을 설계하고 구현합니다.",
+            "dependencies": [],
+            "details": "리그 생성 주기, 리그 데이터 구조, 자동화 스케줄링(예: cron job) 등을 포함합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "리그 관리(참여/점수) 로직 개발",
+            "description": "사용자의 리그 참여, 점수 기록 및 업데이트, 리그 내 유저 상태 관리 기능을 구현합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "참여 신청, 점수 산정 방식, 리그 내 유저별 상태(예: 탈락, 승리 등) 관리 포함.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "실시간 랭킹 시스템(Socket.io) 구현",
+            "description": "Socket.io를 활용하여 리그 내 실시간 랭킹 정보를 서버-클라이언트 간에 동기화하는 시스템을 개발합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "Socket.io 서버 설정, 랭킹 데이터 브로드캐스트, 클라이언트 구독 및 갱신 로직 포함.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "프론트엔드 리그전 UI 개발",
+            "description": "사용자가 리그에 참여하고 진행 상황을 확인할 수 있는 리그전 관련 UI를 설계 및 구현합니다.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "리그 목록, 참여 버튼, 진행 상태 표시 등 리그전 관련 화면 구성.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "실시간 랭킹 표시 UI 구현",
+            "description": "실시간으로 변화하는 랭킹 정보를 시각적으로 표시하는 UI를 개발합니다.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "랭킹 테이블, 유저별 순위 강조, 실시간 갱신 애니메이션 등 포함.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "리그전 통합 테스트 및 검증",
+            "description": "전체 리그 시스템(생성, 참여, 점수, 실시간 랭킹, UI)의 통합 테스트를 수행하고, 버그 및 개선점을 도출합니다.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "단위/통합 테스트, 시나리오별 QA, 실시간 동작 검증 등 포함.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "환급제 시스템 구현",
+        "description": "결제 연동 및 출석률 기반 자동 환급 처리",
+        "details": "결제 시스템(예: 아임포트, 토스페이먼츠) 연동, 출석률 추적 및 자동 환급 로직 구현. 환급 조건 충족 시 자동 처리.",
+        "testStrategy": "결제 및 출석률 기반 환급 처리 테스트",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          7
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "외부 결제 시스템 연동",
+            "description": "결제 시스템 API를 연동하여 결제 요청, 승인, 실패 처리 등 결제 관련 기능을 구현합니다.",
+            "dependencies": [],
+            "details": "PG사(결제대행사) API 문서 분석, 결제 요청/응답 처리, 결제 상태 저장 로직 구현",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "출석률 추적 로직 개발",
+            "description": "학생별 출석 데이터를 기록하고 출석률을 계산하는 로직을 구현합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "출석 데이터 모델 설계, 출석 기록 저장, 출석률 계산 함수 구현",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "환급 조건 로직 구현",
+            "description": "출석률 등 환급 조건을 판단하는 로직을 개발합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "환급 기준(예: 출석률 80% 이상) 정의, 조건 충족 여부 판단 함수 구현",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "자동 환급 처리 시스템 구축",
+            "description": "환급 조건 충족 시 자동으로 환급을 처리하는 시스템을 구현합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "환급 요청 자동화, 환급 상태 관리, 환급 결과 알림 기능 구현",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "결제 및 환급 통합 테스트",
+            "description": "전체 결제 및 환급 프로세스에 대한 통합 테스트를 수행하여 정상 동작을 검증합니다.",
+            "dependencies": [
+              4
+            ],
+            "details": "테스트 케이스 작성, 시나리오별 결제/환급 테스트, 오류 및 예외 처리 검증",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "문제 평가 및 신고 시스템 구현",
+        "description": "문제 해결 후 평가(붐업/붐따) 및 신고 기능 구현",
+        "details": "프론트엔드에서 문제 해결 후 평가 버튼 제공, 백엔드에서 평가 점수 및 신고 내역 저장. 신고 시 관리자 알림.",
+        "testStrategy": "문제 평가 및 신고 제출, 관리자 알림 테스트",
+        "priority": "low",
+        "dependencies": [
+          1,
+          6
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "문제 평가 UI 구현",
+            "description": "사용자가 문제를 평가할 수 있는 UI를 설계 및 개발합니다. 직관적이고 명확한 평가 인터페이스를 제공합니다.",
+            "dependencies": [],
+            "details": "평가 점수 입력, 시각적 계층 구조, 명확한 명칭 및 그룹 표시 등 UI/UX 원칙을 반영하여 구현합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "평가 점수 저장 로직 개발",
+            "description": "사용자가 입력한 평가 점수를 서버에 저장하는 백엔드 로직을 구현합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "평가 점수의 유효성 검사, 데이터베이스 저장, 오류 처리 및 사용자 피드백 제공을 포함합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "신고 기능 및 관리자 알림 구현",
+            "description": "문제 신고 기능을 추가하고, 신고 발생 시 관리자가 알림을 받을 수 있도록 합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "신고 사유 입력, 신고 데이터 저장, 관리자에게 실시간 또는 주기적 알림 전송 로직을 포함합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "평가 및 신고 기능 테스트",
+            "description": "구현된 평가 및 신고 기능에 대해 UI 및 로직 테스트를 수행합니다.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "단위 테스트, 사용성 테스트, 오류 예방 및 정상 동작 여부를 검증합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "OpenAI 기반 문제 생성 엔진 연동",
+        "description": "OpenAI API(GPT-4) 연동 및 레벨별 맞춤 문제 자동 생성",
+        "details": "백엔드에서 OpenAI API 호출, 레벨/주제별 문제 생성 로직 구현. 생성된 문제는 문제 저장소에 저장.",
+        "testStrategy": "OpenAI API 호출 및 문제 생성, 저장 테스트",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "OpenAI API 연동",
+            "description": "OpenAI API Key를 발급받고, 프로젝트에 API 연동을 위한 환경설정 및 인증을 진행합니다.",
+            "dependencies": [],
+            "details": "OpenAI 회원가입, 결제수단 등록, API Key 발급 및 환경변수(.env) 설정, 라이브러리 설치 및 API 연동 코드 작성",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "레벨/주제별 문제 생성 로직 구현",
+            "description": "OpenAI API를 활용하여 레벨과 주제에 따라 문제를 생성하는 로직을 개발합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "문제 생성에 필요한 프롬프트 설계, 레벨/주제별 파라미터 정의, API 호출 및 결과 파싱 로직 구현",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "문제 저장소 연동",
+            "description": "생성된 문제를 저장할 데이터베이스 또는 파일 시스템과 연동합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "DB 스키마 설계, 저장/조회/수정 API 구현, 문제 데이터 저장 로직 작성",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "생성 문제 검증",
+            "description": "생성된 문제의 품질과 적합성을 검증하는 로직을 개발합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "문제 내용 검증 기준 수립, 자동/수동 검증 프로세스 구현, 검증 결과 기록",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "문제 생성/저장 테스트",
+            "description": "전체 문제 생성 및 저장 프로세스가 정상적으로 동작하는지 테스트합니다.",
+            "dependencies": [
+              4
+            ],
+            "details": "테스트 케이스 작성, 실제 문제 생성 및 저장 시나리오 실행, 오류 및 예외 처리 확인",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "학습 패턴 분석 및 통계 대시보드 구현",
+        "description": "학습 기록 분석 및 통계 대시보드 구현",
+        "details": "백엔드에서 학습 기록 분석(약점 진단, 성장 그래프), 프론트엔드에서 통계 대시보드(그래프, 표) 구현.",
+        "testStrategy": "학습 기록 분석 및 대시보드 표시 테스트",
+        "priority": "low",
+        "dependencies": [
+          1,
+          7
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "학습 기록 분석 로직 구현",
+            "description": "사용자의 학습 기록 데이터를 수집하고, 패턴 인식 및 약점 진단을 위한 분석 알고리즘을 개발합니다.",
+            "dependencies": [],
+            "details": "머신러닝 또는 통계적 방법을 활용하여 학습 기록에서 의미 있는 인사이트(예: 약점 영역, 성취도 변화 등)를 도출하는 로직을 구현합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "약점 진단 및 성장 그래프 생성",
+            "description": "분석된 데이터를 바탕으로 사용자의 약점 진단 결과와 성장 추이를 시각화할 그래프를 생성합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "진단 결과를 바탕으로 시간에 따른 성장 그래프, 영역별 약점 분포 등 다양한 시각화 자료를 생성합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "통계 대시보드 UI 개발",
+            "description": "분석 결과와 그래프를 효과적으로 보여줄 수 있는 통계 대시보드 사용자 인터페이스를 설계 및 구현합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "대시보드에는 주요 지표, 성장 그래프, 약점 진단 결과 등 다양한 통계 정보를 직관적으로 표시합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "분석 및 대시보드 테스트",
+            "description": "구현된 분석 로직과 대시보드 UI의 정확성과 사용성을 검증합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "테스트 케이스를 설계하여 분석 결과의 신뢰성, 그래프 및 UI의 정상 동작 여부를 확인하고, 개선점을 도출합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "PWA 및 모바일 퍼스트 UI 최적화",
+        "description": "Progressive Web App(PWA) 설정 및 모바일 퍼스트 UI 최적화",
+        "details": "React 프로젝트에 PWA 설정(workbox-webpack-plugin), 모바일 퍼스트 반응형 디자인 적용. 터치 친화적 인터페이스 구현.",
+        "testStrategy": "PWA 설치 및 모바일 환경에서 UI 동작 테스트",
+        "priority": "medium",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "PWA 환경 설정 및 Workbox-Webpack-Plugin 적용",
+            "description": "Webpack 환경에서 workbox-webpack-plugin과 webpack-pwa-manifest를 설치하고, 서비스 워커 및 manifest.json을 설정하여 PWA 기능(오프라인 캐싱, 앱 설치 등)을 구현합니다.",
+            "dependencies": [],
+            "details": "workbox-webpack-plugin과 webpack-pwa-manifest 패키지를 설치합니다. webpack 설정 파일에 서비스 워커와 manifest 플러그인을 추가하고, manifest.json에 앱 이름, 아이콘, 색상 등 필수 정보를 입력합니다. 서비스 워커 등록 코드를 index.js에 추가합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "모바일 퍼스트 반응형 디자인 적용",
+            "description": "CSS 미디어 쿼리와 모바일 우선 스타일링 기법을 활용하여 다양한 화면 크기에서 최적화된 레이아웃을 구현합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "모바일 기기 기준으로 기본 스타일을 작성하고, 데스크탑 등 큰 화면에 맞는 스타일을 미디어 쿼리로 추가합니다. 뷰포트 메타 태그를 설정하고, 폰트 크기, 버튼 크기, 레이아웃 등을 모바일 친화적으로 조정합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "터치 친화적 UI 구현",
+            "description": "터치 인터페이스에 최적화된 UI 컴포넌트(버튼, 네비게이션, 제스처 등)를 설계하고, 터치 이벤트를 고려한 사용자 경험을 제공합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "버튼 크기와 간격을 충분히 확보하고, 터치 영역을 넓게 설정합니다. 스와이프, 롱프레스 등 터치 제스처를 지원하며, 피드백(터치 효과)도 추가합니다. 모바일 환경에서의 접근성을 고려합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "모바일 환경 테스트 및 최적화",
+            "description": "실제 모바일 기기 및 브라우저 개발자 도구를 활용해 PWA, 반응형 디자인, 터치 UI가 정상 동작하는지 테스트하고, 문제점을 수정합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "크롬 개발자 도구의 모바일 시뮬레이션, 실제 스마트폰에서의 설치 및 오프라인 동작, manifest 및 서비스 워커 정상 동작 여부, 터치 UI 반응성 등을 점검합니다. 발견된 이슈를 수정하여 최종 품질을 확보합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "모니터링 및 에러 추적 시스템 구축",
+        "description": "Google Analytics, Sentry 연동 및 에러 추적 시스템 구축",
+        "details": "프론트엔드에 Google Analytics, Sentry 연동. 백엔드 로그 및 에러 추적 환경 설정.",
+        "testStrategy": "Google Analytics/Sentry 이벤트 전송 및 에러 추적 테스트",
+        "priority": "low",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Google Analytics 연동",
+            "description": "프로젝트에 Google Analytics(GA4) 연동을 위한 서비스 계정 생성, API 활성화, credentials.json 발급 및 GA4 속성에 서비스 계정 추가를 진행합니다.",
+            "dependencies": [],
+            "details": "GCP 콘솔에서 서비스 계정 생성 및 API 활성화, credentials.json 파일 다운로드, GA4 속성에 서비스 계정 이메일 추가, 연동 테스트 수행.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Sentry 연동",
+            "description": "프로젝트에 Sentry를 연동하여 프론트엔드 및 백엔드의 에러 추적 환경을 구축합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "Sentry 프로젝트 생성, DSN 발급, 코드에 Sentry SDK 설치 및 초기화, 정상 동작 확인.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "백엔드 로그/에러 추적 환경 설정",
+            "description": "백엔드 서버에서 로그 및 에러 추적을 위한 환경을 구성하고, 필요 시 Sentry와 연동합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "로그 관리 도구(예: Winston, Bunyan 등) 설정, 에러 핸들링 로직 구현, Sentry 연동 시 서버 측 SDK 적용 및 테스트.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-08T02:03:40.754Z",
+      "updated": "2025-07-08T02:03:40.754Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
