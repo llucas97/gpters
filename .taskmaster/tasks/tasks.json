@@ -5,11 +5,11 @@
         "id": 1,
         "title": "프로젝트 저장소 및 초기 환경 설정",
         "description": "프로젝트 저장소 생성 및 초기 환경(프론트엔드, 백엔드, 데이터베이스) 설정",
-        "details": "Git 저장소 생성, React 18 + TypeScript + Bootstrap 5 기반 프론트엔드 프로젝트 초기화, Node.js 18 + Express 4 기반 백엔드 프로젝트 초기화, PostgreSQL 및 Redis 환경 설정. Vercel 및 Railway 배포 환경 준비.",
-        "testStrategy": "저장소 생성 및 각 프로젝트 초기화 후, 기본 실행 및 빌드 테스트 수행",
-        "priority": "high",
-        "dependencies": [],
         "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "details": "Git 저장소 생성, React 18 + TypeScript + Bootstrap 5 기반 프론트엔드 프로젝트 초기화, Node.js 18 + Express 4 기반 백엔드 프로젝트 초기화, MySQL 및 Redis 환경 설정. Vercel 및 Railway 배포 환경 준비.",
+        "testStrategy": "저장소 생성 및 각 프로젝트 초기화 후, 기본 실행 및 빌드 테스트 수행",
         "subtasks": [
           {
             "id": 1,
@@ -17,7 +17,7 @@
             "description": "프로젝트 버전 관리를 위해 새로운 Git 저장소를 생성하고 초기화합니다.",
             "dependencies": [],
             "details": "로컬 또는 GitHub, GitLab 등 원격 저장소에서 저장소를 생성하고, .gitignore 파일을 추가합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -28,7 +28,7 @@
               1
             ],
             "details": "create-react-app 또는 Next.js 등으로 프로젝트를 생성하고, TypeScript 및 Bootstrap 5를 설치 및 적용합니다.[1][2][3][4][5]",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -44,12 +44,12 @@
           },
           {
             "id": 4,
-            "title": "PostgreSQL 환경 설정",
-            "description": "백엔드에서 사용할 PostgreSQL 데이터베이스 환경을 설정합니다.",
+            "title": "MySQL 환경 설정",
+            "description": "백엔드에서 사용할 MySQL 데이터베이스 환경을 설정합니다.",
             "dependencies": [
               3
             ],
-            "details": "PostgreSQL 설치 및 데이터베이스/사용자 생성, 연결 테스트를 진행합니다.",
+            "details": "MySQL 설치 및 데이터베이스/사용자 생성, 연결 테스트를 진행합니다. MySQL Workbench 또는 CLI를 활용하여 데이터베이스를 관리합니다.",
             "status": "pending",
             "testStrategy": ""
           },
@@ -84,20 +84,20 @@
         "id": 2,
         "title": "데이터베이스 스키마 설계 및 구현",
         "description": "사용자, 문제, 리그, 통계 테이블 스키마 설계 및 데이터베이스 구현",
-        "details": "PostgreSQL에 사용자(개인정보, 레벨, 경험치, 출석 기록), 문제(내용, 난이도, 카테고리, 평가 점수), 리그(주간 순위, 참여자, 점수), 통계(학습 기록, 진도율, 성취도) 테이블 생성. Redis는 세션/캐싱용으로 별도 설정.",
-        "testStrategy": "각 테이블 생성 및 기본 CRUD 쿼리 테스트, Redis 연결 테스트",
-        "priority": "high",
+        "status": "pending",
         "dependencies": [
           1
         ],
-        "status": "pending",
+        "priority": "high",
+        "details": "MySQL에 사용자(개인정보, 레벨, 경험치, 출석 기록), 문제(내용, 난이도, 카테고리, 평가 점수), 리그(주간 순위, 참여자, 점수), 통계(학습 기록, 진도율, 성취도) 테이블 생성. Redis는 세션/캐싱용으로 별도 설정.",
+        "testStrategy": "각 테이블 생성 및 기본 CRUD 쿼리 테스트, Redis 연결 테스트",
         "subtasks": [
           {
             "id": 1,
             "title": "테이블 스키마 설계",
             "description": "사용자, 문제, 리그, 통계 테이블의 구조와 관계를 논리적으로 설계합니다.",
             "dependencies": [],
-            "details": "각 테이블의 필드, 데이터 타입, PK/FK, 관계(1:N, N:M 등)를 정의합니다.\n<info added on 2025-07-09T13:23:30.921Z>\nERD 설계 1단계 완료\n\n- PRD 기반 10개 핵심 테이블(Users, Problems, Leagues, Statistics, Surveys, Submissions, Attendance, User_League_Participation, Problem_Evaluations, Payments) 식별 및 엔티티 분석\n- Mermaid ERD 다이어그램으로 전체 테이블 구조 및 관계 시각화\n- Users, Problems, Submissions 등 주요 테이블의 상세 설계(소셜 로그인, 레벨/경험치, 문제 타입 등) 진행 중\n\n다음 단계:\n- 각 테이블의 제약조건(Primary Key, Foreign Key, Unique, Check 등) 및 인덱스 설계\n- PostgreSQL DDL(CREATE TABLE) 문 작성\n- 관계 무결성 제약조건 정의\n</info added on 2025-07-09T13:23:30.921Z>\n<info added on 2025-07-09T13:28:45.915Z>\nERD 설계 및 데이터베이스 스키마 구현이 최종 완료되었습니다.\n\n- database_schema.sql: 10개 핵심 테이블(Users, Problems, Submissions, Attendance, Leagues 등) 전체 구조, 모든 제약조건(PK, FK, Unique, Check), 인덱스, 트리거, 뷰, 샘플 데이터, 관리자 계정 포함\n- redis_schema.md: 세션 관리, 성능 캐싱, 실시간 랭킹 등 Redis 캐싱 전략, 키 네이밍 규칙, TTL, 모니터링, Node.js 연동, 보안 가이드 포함\n- crud_queries.sql: 모든 테이블의 CRUD, 복합 쿼리(대시보드, 추천 시스템), 성능 최적화 쿼리(총 496줄)\n- 적응형 레벨 시스템(0~5단계), 게이미피케이션(리그전, 출석, 경험치), 4가지 문제 타입(블록코딩, 빈칸채우기, 코드에디터, 레벨테스트), 실시간 성능(캐싱), 확장성(인덱스 최적화, 파티셔닝) 완벽 지원\n- PRD 요구사항 100% 반영, PostgreSQL 모범 사례 및 성능/보안 최적화 적용, 산출물 검증 완료\n</info added on 2025-07-09T13:28:45.915Z>",
+            "details": "각 테이블의 필드, 데이터 타입, PK/FK, 관계(1:N, N:M 등)를 정의합니다.\n<info added on 2025-07-09T13:23:30.921Z>\nERD 설계 1단계 완료\n\n- PRD 기반 10개 핵심 테이블(Users, Problems, Leagues, Statistics, Surveys, Submissions, Attendance, User_League_Participation, Problem_Evaluations, Payments) 식별 및 엔티티 분석\n- Mermaid ERD 다이어그램으로 전체 테이블 구조 및 관계 시각화\n- Users, Problems, Submissions 등 주요 테이블의 상세 설계(소셜 로그인, 레벨/경험치, 문제 타입 등) 진행 중\n\n다음 단계:\n- 각 테이블의 제약조건(Primary Key, Foreign Key, Unique, Check 등) 및 인덱스 설계\n- MySQL DDL(CREATE TABLE) 문 작성\n- 관계 무결성 제약조건 정의\n</info added on 2025-07-09T13:23:30.921Z>\n<info added on 2025-07-09T13:28:45.915Z>\nERD 설계 및 데이터베이스 스키마 구현이 최종 완료되었습니다.\n\n- database_schema.sql: 10개 핵심 테이블(Users, Problems, Submissions, Attendance, Leagues 등) 전체 구조, 모든 제약조건(PK, FK, Unique, Check), 인덱스, 트리거, 뷰, 샘플 데이터, 관리자 계정 포함 (MySQL 문법 적용)\n- redis_schema.md: 세션 관리, 성능 캐싱, 실시간 랭킹 등 Redis 캐싱 전략, 키 네이밍 규칙, TTL, 모니터링, Node.js 연동, 보안 가이드 포함\n- crud_queries.sql: 모든 테이블의 CRUD, 복합 쿼리(대시보드, 추천 시스템), 성능 최적화 쿼리(총 496줄, MySQL 문법 적용)\n- 적응형 레벨 시스템(0~5단계), 게이미피케이션(리그전, 출석, 경험치), 4가지 문제 타입(블록코딩, 빈칸채우기, 코드에디터, 레벨테스트), 실시간 성능(캐싱), 확장성(인덱스 최적화, 파티셔닝) 완벽 지원\n- PRD 요구사항 100% 반영, MySQL 모범 사례 및 성능/보안 최적화 적용, 산출물 검증 완료\n</info added on 2025-07-09T13:28:45.915Z>",
             "status": "done",
             "testStrategy": ""
           },
@@ -108,7 +108,7 @@
             "dependencies": [
               1
             ],
-            "details": "DDL(SQL) 문을 작성하여 DB에 사용자, 문제, 리그, 통계 테이블을 생성합니다.",
+            "details": "DDL(SQL) 문을 작성하여 DB에 사용자, 문제, 리그, 통계 테이블을 생성합니다. 모든 SQL 문은 MySQL 문법을 사용합니다.",
             "status": "pending",
             "testStrategy": ""
           },
@@ -130,7 +130,7 @@
             "dependencies": [
               2
             ],
-            "details": "Create, Read, Update, Delete 쿼리를 SQL로 작성하고, 필요한 경우 Redis 캐시 연동 로직도 포함합니다.",
+            "details": "Create, Read, Update, Delete 쿼리를 MySQL SQL로 작성하고, 필요한 경우 Redis 캐시 연동 로직도 포함합니다.",
             "status": "pending",
             "testStrategy": ""
           },
@@ -996,7 +996,7 @@
     ],
     "metadata": {
       "created": "2025-07-08T02:03:40.754Z",
-      "updated": "2025-07-09T13:28:50.544Z",
+      "updated": "2025-07-14T01:41:53.539Z",
       "description": "Tasks for master context"
     }
   }
