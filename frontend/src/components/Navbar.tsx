@@ -28,6 +28,18 @@ const Navbar = () => {
               </Link>
             </li>
             <li className="nav-item">
+              <Link className="nav-link" to="/survey">
+                <i className="bi bi-clipboard-data me-1"></i>
+                설문조사
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/profile">
+                <i className="bi bi-person-circle me-1"></i>
+                프로필
+              </Link>
+            </li>
+            <li className="nav-item">
               <Link className="nav-link" to="/login">
                 로그인
               </Link>
