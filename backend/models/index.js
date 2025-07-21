@@ -9,7 +9,7 @@ const sequelize = new Sequelize(
     host: dbConfig.HOST,
     port: dbConfig.PORT,
     dialect: dbConfig.dialect,
-    logging: false // SQL 로그 출력 안함
+    logging: false,
   }
 );
 
@@ -17,6 +17,12 @@ const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
+// ✅ 먼저 모델 정의
 db.User = require("./user.model.js")(sequelize, DataTypes);
+db.Survey = require("./survey")(sequelize, DataTypes);
+
+// ✅ 모델 관계 설정
+if (db.User.associate) db.User.associate(db);
+if (db.Survey.associate) db.Survey.associate(db);
 
 module.exports = db;

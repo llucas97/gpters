@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Home</title>
+</head>
+<body>
+  <h1 username="welcome-text">환영합니다!</h1>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const payload = token ? JSON.parse(atob(token.split('.')[1])) : null;
+    const username = payload?.email?.split('@')[0] || '사용자';
+
+    document.getElementById('welcome-text').innerText = `${username}님, 환영합니다!`;
+  </script>
+</body>
+</html>
