@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>내 프로필</title>
+  <style>
+    body { font-family: sans-serif; margin: 30px; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input, textarea {
+      width: 300px;
+      margin-top: 5px;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 8px 16px;
+      font-weight: bold;
+    }
+    #status, #pwStatus {
+      margin-top: 10px;
+      font-weight: bold;
+      color: red;
+    }
+    hr {
+      margin-top: 30px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>내 프로필</h1>
+
+  <!-- ✅ 프로필 수정 -->
+  <label for="fullName">이름</label>
+  <input type="text" id="fullName" />
+
+  <label for="username">사용자명</label>
+  <input type="text" id="username" />
+
+  <button onclick="updateProfile()">프로필 저장</button>
+  <p id="status"></p>
+
+  <hr />
+
+  <!-- ✅ 비밀번호 변경 -->
+  <h2>비밀번호 변경</h2>
+
+  <label for="currentPassword">현재 비밀번호</label>
+  <input type="password" id="currentPassword" />
+
+  <label for="newPassword">새 비밀번호</label>
+  <input type="password" id="newPassword" />
+
+  <button onclick="changePassword()">비밀번호 변경</button>
+  <p id="pwStatus"></p>
+
+  <script>
+    // ✅ 프로필 불러오기
+    async function fetchProfile() {
+      try {
+        const res = await fetch('/api/profile', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        const result = await res.json();
+
+        if (result.success) {
+          const p = result.data;
+          document.getElementById('fullName').value = p.full_name || '';
+          document.getElementById('username').value = p.username || '';
+        } else {
+          document.getElementById('status').innerText = '프로필을 불러올 수 없습니다.';
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById('status').innerText = '에러 발생';
+      }
+    }
+
+    // ✅ 프로필 수정
+    async function updateProfile() {
+      const payload = {
+        full_name: document.getElementById('fullName').value,
+        username: document.getElementById('username').value,
+      };
+
+      try {
+        const res = await fetch('/api/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+        document.getElementById('status').innerText = result.message;
+      } catch (err) {
+        console.error(err);
+        document.getElementById('status').innerText = '업데이트 실패';
+      }
+    }
+
+    // ✅ 비밀번호 변경
+    async function changePassword() {
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+
+      if (!currentPassword || !newPassword) {
+        document.getElementById('pwStatus').innerText = '모든 필드를 입력해주세요.';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/profile/password', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ currentPassword, newPassword })
+        });
+
+        const result = await res.json();
+        document.getElementById('pwStatus').innerText = result.message;
+      } catch (err) {
+        console.error(err);
+        document.getElementById('pwStatus').innerText = '비밀번호 변경 실패';
+      }
+    }
+
+    // ✅ 페이지 로딩 시 프로필 불러오기
+    fetchProfile();
+  </script>
+</body>
+</html>
