@@ -14,7 +14,7 @@ const response = await fetch(`${API_URL}/signup`, {
     email: data.email,
     password: data.password,
     username: data.username,
-    full_name: data.fullName,
+    fullName: data.fullName,
   }),
 });
   
@@ -24,4 +24,23 @@ const response = await fetch(`${API_URL}/signup`, {
   }
 
   return response.json();
+};
+
+export const loginUser = async (data: { email: string; password: string }) => {
+  const response = await fetch(`${API_URL}/login`, {
+    method: 'POST',
+    credentials: 'include',  // 세션 쿠키 포함 중요!
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: data.email,
+      password: data.password,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || '로그인 실패');
+  }
+
+  return response.json();  // { success: true, user_id: ... }
 };

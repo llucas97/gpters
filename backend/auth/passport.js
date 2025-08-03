@@ -8,12 +8,10 @@ const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 
 module.exports = () => {
-  // ✅ 세션 저장: user_id만 저장
   passport.serializeUser((user, done) => {
     done(null, user.user_id);
   });
 
-  // ✅ 세션에서 user_id로 유저 조회
   passport.deserializeUser(async (id, done) => {
     try {
       const user = await User.findByPk(id);
