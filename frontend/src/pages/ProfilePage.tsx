@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ProfilePage.css';
+import { fetchProfile, updateProfile } from '../api/profile'; // 🔹 프로필 조회/수정 API
 
 interface UserProfile {
   id: string;
@@ -16,44 +17,44 @@ interface UserProfile {
 // API 호출 함수들
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-const fetchProfile = async (userId: string): Promise<UserProfile> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/profile/${userId}`);
+// const fetchProfile = async (userId: string): Promise<UserProfile> => {
+//   try {
+//     const response = await fetch(`${API_BASE_URL}/api/profile/${userId}`);
     
-    if (!response.ok) {
-      throw new Error('프로필을 불러올 수 없습니다.');
-    }
+//     if (!response.ok) {
+//       throw new Error('프로필을 불러올 수 없습니다.');
+//     }
 
-    const result = await response.json();
-    return result.data;
-  } catch (error) {
-    console.error('Profile fetch error:', error);
-    throw error;
-  }
-};
+//     const result = await response.json();
+//     return result.data;
+//   } catch (error) {
+//     console.error('Profile fetch error:', error);
+//     throw error;
+//   }
+// };
 
-const updateProfile = async (userId: string, profileData: Partial<UserProfile>): Promise<UserProfile> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/profile/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(profileData),
-    });
+// const updateProfile = async (userId: string, profileData: Partial<UserProfile>): Promise<UserProfile> => {
+//   try {
+//     const response = await fetch(`${API_BASE_URL}/api/profile/${userId}`, {
+//       method: 'PUT',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify(profileData),
+//     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || '프로필 업데이트에 실패했습니다.');
-    }
+//     if (!response.ok) {
+//       const errorData = await response.json();
+//       throw new Error(errorData.message || '프로필 업데이트에 실패했습니다.');
+//     }
 
-    const result = await response.json();
-    return result.data;
-  } catch (error) {
-    console.error('Profile update error:', error);
-    throw error;
-  }
-};
+//     const result = await response.json();
+//     return result.data;
+//   } catch (error) {
+//     console.error('Profile update error:', error);
+//     throw error;
+//   }
+// };
 
 const uploadProfileImage = async (userId: string, imageData: string): Promise<string> => {
   try {

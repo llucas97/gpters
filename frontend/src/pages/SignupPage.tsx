@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { registerUser } from '../api/auth';
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({
@@ -68,32 +69,30 @@ const SignupPage = () => {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) {
-      return
-    }
-    
-    setIsLoading(true)
-    
-    try {
-      // TODO: API 호출
-      console.log('회원가입 시도:', formData)
-      
-      // 임시 성공 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      alert('회원가입 성공! 로그인 페이지로 이동합니다.')
-      // TODO: 실제로는 로그인 페이지로 리다이렉트하거나 자동 로그인
-      
-    } catch (error) {
-      console.error('회원가입 에러:', error)
-      setErrors({ general: '회원가입에 실패했습니다. 다시 시도해주세요.' })
-    } finally {
-      setIsLoading(false)
-    }
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!validateForm()) return;
+
+  setIsLoading(true);
+
+  try {
+    await registerUser({
+      email: formData.email,
+      password: formData.password,
+      username: formData.username,
+      fullName: formData.fullName,
+    });
+
+    alert('회원가입 성공! 로그인 페이지로 이동합니다.');
+    window.location.href = '/login'; // 또는 useNavigate 사용
+  } catch (error: any) {
+    console.error('회원가입 에러:', error);
+    setErrors({ general: error.message || '회원가입 실패' });
+  } finally {
+    setIsLoading(false);
   }
+};
 
   return (
     <div className="auth-container">

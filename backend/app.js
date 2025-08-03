@@ -1,3 +1,4 @@
+const cors = require('cors');
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
@@ -15,6 +16,12 @@ const profileRoutes = require('./routes/profile');
 const app = express();
 initPassport();
 
+app.use(cors({
+  origin: 'http://localhost:3000',  // 프론트엔드 주소
+  credentials: true,                 // 세션 사용 시 true (passport 등)
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(session({
   secret: 'my-dev-secret',
   resave: false,
@@ -33,7 +40,7 @@ app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/profile', profileRoutes);
 app.use('/survey', surveyRouter);
-app.use('/local', localAuthRoutes);
+app.use('/', localAuthRoutes);
 
 
 
@@ -41,7 +48,7 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html'
 
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public/login.html')));
 
-app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'public/register.html')));
+app.get('/signup', (req, res) => res.sendFile(path.join(__dirname, 'public/signup.html')));
 
 app.get('/survey', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/survey.html'));
@@ -69,7 +76,7 @@ app.use('/auth', authRoutes);          // 소셜 로그인
 app.use('/auth', localAuthRoutes);     // 로컬 회원가입/로그인
 
 // ✅ 서버 시작
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 

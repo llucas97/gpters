@@ -1,5 +1,19 @@
 {
+  "name": "gpters_merged_cleaned",
+  "version": "1.0.0",
+  "description": "졸업작품",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "task-master-ai": "^0.19.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
   }
 }

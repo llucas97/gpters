@@ -4,9 +4,16 @@ const { User } = require('../models');
 const passport = require('passport');
 const router = express.Router();
 
-// ✅ 회원가입
-router.post('/register', async (req, res) => {
-  const { email, password, username, full_name } = req.body;
+
+// ✅ 로그인 - 세션 기반
+router.post('/login', passport.authenticate('local'), (req, res) => {
+  // passport가 자동으로 req.login() 수행 → 세션에 저장됨
+  res.json({ success: true, user_id: req.user.user_id });
+});
+
+
+router.post('/signup', async (req, res) => {
+  const { email, password, username, fullName } = req.body;
 
   try {
     const exists = await User.findOne({ where: { email } });
@@ -17,7 +24,7 @@ router.post('/register', async (req, res) => {
     const user = await User.create({
       email,
       username,
-      full_name,
+      full_name: fullName,
       password_hash: hashed,
       provider: 'local',
       survey_completed: false,
@@ -29,12 +36,6 @@ router.post('/register', async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: '서버 오류', error: err.message });
   }
-});
-
-// ✅ 로그인 - 세션 기반
-router.post('/login', passport.authenticate('local'), (req, res) => {
-  // passport가 자동으로 req.login() 수행 → 세션에 저장됨
-  res.json({ success: true, user_id: req.user.user_id });
 });
 
 module.exports = router;

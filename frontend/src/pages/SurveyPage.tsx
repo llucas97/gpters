@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import './SurveyPage.css';
+import { submitSurvey } from '../api/survey'; // 🔹 설문 결과 저장 API
+
 
 interface SurveyData {
   occupation: string;
@@ -20,33 +22,33 @@ interface StepProps {
 }
 
 // API 호출 함수
-const submitSurvey = async (surveyData: SurveyData) => {
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// const submitSurvey = async (surveyData: SurveyData) => {
+//   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/survey`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...surveyData,
-        userId: null // 현재는 로그인 기능이 없으므로 null
-      }),
-    });
+//   try {
+//     const response = await fetch(`${API_BASE_URL}/api/survey`, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({
+//         ...surveyData,
+//         userId: null // 현재는 로그인 기능이 없으므로 null
+//       }),
+//     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || '설문조사 제출에 실패했습니다.');
-    }
+//     if (!response.ok) {
+//       const errorData = await response.json();
+//       throw new Error(errorData.message || '설문조사 제출에 실패했습니다.');
+//     }
 
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    console.error('Survey submission error:', error);
-    throw error;
-  }
-};
+//     const result = await response.json();
+//     return result;
+//   } catch (error) {
+//     console.error('Survey submission error:', error);
+//     throw error;
+//   }
+// };
 
 // 1단계: 직업
 const Step1: React.FC<StepProps> = ({ data, onDataChange, onNext, isValid }) => {
