@@ -72,7 +72,7 @@ app.get('/logout', (req, res, next) => {
 
 
 // ✅ API 라우터
-app.use('/auth', localAuthRoutes);     // 로컬 회원가입/로그인
+app.use('/api/auth', localAuthRoutes);     // /api/auth 경로로 변경    // 로컬 회원가입/로그인
 
 // ✅ 서버 시작
 const PORT = process.env.PORT || 3001;
