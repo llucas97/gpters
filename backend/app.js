@@ -17,8 +17,8 @@ const app = express();
 initPassport();
 
 app.use(cors({
-  origin: 'http://localhost:3000',  // 프론트엔드 주소
-  credentials: true,                 // 세션 사용 시 true (passport 등)
+  origin: 'http://localhost:5173',  // ✅ Vite dev server 주소
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
