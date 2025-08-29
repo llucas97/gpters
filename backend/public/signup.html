@@ -31,12 +31,12 @@
       const data = {
         email: formData.get('email'),
         username: formData.get('username'),
-        full_name: formData.get('full_name'),
+        full_name: formData.get('fullName'),
         password: formData.get('password')
       };
 
       try {
-        const res = await fetch('/auth/register', {
+        const res = await fetch('/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
