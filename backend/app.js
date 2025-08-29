@@ -4,7 +4,7 @@ const session = require('express-session');
 const passport = require('passport');
 require('dotenv').config();
 const path = require('path');
-const authRoutes = require('./auth/routes');
+// const authRoutes = require('./auth/routes');
 const initPassport = require('./auth/passport');
 const localAuthRoutes = require('./routes/localAuth');  // 로컬 회원가입 라우터
 const db = require('./models');
@@ -72,7 +72,6 @@ app.get('/logout', (req, res, next) => {
 
 
 // ✅ API 라우터
-app.use('/auth', authRoutes);          // 소셜 로그인
 app.use('/auth', localAuthRoutes);     // 로컬 회원가입/로그인
 
 // ✅ 서버 시작
