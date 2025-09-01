@@ -10,6 +10,7 @@ const localAuthRoutes = require('./routes/localAuth');  // 로컬 회원가입 �
 const db = require('./models');
 const surveyRouter = require('./routes/survey');
 const profileRoutes = require('./routes/profile');
+const levelTestRoutes = require('./routes/levelTest');
 
 
 
@@ -39,6 +40,9 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/profile', profileRoutes);
+app.use('/api/survey', surveyRouter);
+app.use('/api/profile', profileRoutes);
+app.use('/api/level-test', levelTestRoutes);
 app.use('/survey', surveyRouter);
 app.use('/', localAuthRoutes);
 
