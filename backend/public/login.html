@@ -42,7 +42,7 @@
 
         if (res.ok) {
           localStorage.setItem('token', result.token);
-          alert('✅ 로그인 성공');
+          alert('로그인 성공');
 
           if (result.survey_required) {
             window.location.href = '/survey.html';

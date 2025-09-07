@@ -62,6 +62,7 @@ router.post('/signup', async (req, res) => {
     console.log('  - username:', username);
     console.log('  - full_name:', full_name);
 
+
     const user = await User.create({
       email,
       username,
@@ -73,7 +74,8 @@ router.post('/signup', async (req, res) => {
       email_verified: false,
     });
 
-    console.log('✅ 사용자 생성 완료:', user.toJSON());
+
+    console.log('사용자 생성 완료:', user.toJSON());
 
     res.status(201).json({ message: '회원가입 성공', user_id: user.user_id });
   } catch (err) {
