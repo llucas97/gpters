@@ -167,7 +167,7 @@ const LoginPage = () => {
           {isLoading ? (
             <>
               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-              로그인 중...
+              로그인 중....
             </>
           ) : (
             '로그인'
