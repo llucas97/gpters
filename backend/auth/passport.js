@@ -3,7 +3,8 @@ const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const KakaoStrategy = require('passport-kakao').Strategy;
 const GitHubStrategy = require('passport-github2').Strategy;
-const { User } = require('../models');
+const db = require('../models');
+const { User } = db;
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 
@@ -27,14 +28,26 @@ module.exports = () => {
     passwordField: 'password'
   }, async (email, password, done) => {
     try {
+      console.log('🔍 Passport 로그인 시도:', email);
+      
       const user = await User.findOne({ where: { email } });
-      if (!user) return done(null, false, { message: '존재하지 않는 사용자입니다' });
+      if (!user) {
+        console.log('❌ 사용자 없음:', email);
+        return done(null, false, { message: '존재하지 않는 사용자입니다' });
+      }
 
+      console.log('✅ 사용자 찾음:', user.email);
+      
       const isValid = await bcrypt.compare(password, user.password_hash);
-      if (!isValid) return done(null, false, { message: '비밀번호가 일치하지 않습니다' });
+      if (!isValid) {
+        console.log('❌ 비밀번호 불일치');
+        return done(null, false, { message: '비밀번호가 일치하지 않습니다' });
+      }
 
+      console.log('✅ 비밀번호 일치');
       return done(null, user);
     } catch (err) {
+      console.error('❌ Passport 에러:', err);
       return done(err);
     }
   }));
