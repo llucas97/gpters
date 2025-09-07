@@ -10,7 +10,7 @@ const localAuthRoutes = require('./routes/localAuth');  // 로컬 회원가입 �
 const db = require('./models');
 const surveyRouter = require('./routes/survey');
 const profileRoutes = require('./routes/profile');
-const levelTestRoutes = require('./routes/levelTest');
+const problemRoutes = require('./routes/problem');
 
 
 
@@ -23,6 +23,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(session({
   secret: 'my-dev-secret',
   resave: false,
@@ -42,7 +43,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/profile', profileRoutes);
 app.use('/api/survey', surveyRouter);
 app.use('/api/profile', profileRoutes);
-app.use('/api/level-test', levelTestRoutes);
+app.use('/api/problems', problemRoutes);
 app.use('/survey', surveyRouter);
 app.use('/', localAuthRoutes);
 

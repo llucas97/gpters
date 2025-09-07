@@ -111,13 +111,13 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
 
-    // 레벨테스트 1:N (신규)
-    if (models.LevelTest) {
-      User.hasMany(models.LevelTest, {
-        foreignKey: 'user_id',
-        as: 'levelTests',
-      });
-    }
+    // 문제 관련 (submissions를 통한 관계 - 추후 구현 예정)
+    // if (models.Submission) {
+    //   User.hasMany(models.Submission, {
+    //     foreignKey: 'user_id',
+    //     as: 'submissions',
+    //   });
+    // }
 
     // 아래는 선택(모델이 있을 때만 연결) — 원 ERD 기준
     if (models.Submission) {
