@@ -1,27 +1,51 @@
 import { Link } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 const HomePage = () => {
+  const { isAuthenticated, user } = useAuth()
   return (
     <div className="container">
       <div className="row justify-content-center">
         <div className="col-lg-10">
           <div className="hero-section text-center">
             <h1 className="hero-title">
-              Gpters에 오신 것을 환영합니다! 🚀
+              {isAuthenticated ? (
+                <>안녕하세요, {user?.username}님! 🚀</>
+              ) : (
+                <>Gpters에 오신 것을 환영합니다! 🚀</>
+              )}
             </h1>
             <p className="hero-subtitle">
-              코딩 실력을 체계적으로 키울 수 있는 종합 교육 플랫폼입니다.<br />
-              레벨테스트, 문제해결, 리그전 등 다양한 기능으로 
-              여러분의 프로그래밍 실력을 한 단계 업그레이드하세요.
+              {isAuthenticated ? (
+                <>오늘도 코딩 실력 향상을 위해 함께 학습해보세요!<br />
+                레벨테스트부터 시작하거나 바로 문제풀이에 도전해보세요.</>
+              ) : (
+                <>코딩 실력을 체계적으로 키울 수 있는 종합 교육 플랫폼입니다.<br />
+                레벨테스트, 문제해결, 리그전 등 다양한 기능으로 
+                여러분의 프로그래밍 실력을 한 단계 업그레이드하세요.</>
+              )}
             </p>
             
             <div className="d-grid gap-3 d-md-flex justify-content-md-center mb-4">
-              <Link to="/signup" className="btn btn-primary btn-lg px-4">
-                🎯 지금 시작하기
-              </Link>
-              <Link to="/login" className="btn btn-outline-primary btn-lg px-4">
-                로그인
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <Link to="/level-test" className="btn btn-primary btn-lg px-4">
+                    🎯 레벨테스트 시작
+                  </Link>
+                  <Link to="/survey" className="btn btn-outline-primary btn-lg px-4">
+                    📋 설문조사
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/signup" className="btn btn-primary btn-lg px-4">
+                    🎯 지금 시작하기
+                  </Link>
+                  <Link to="/login" className="btn btn-outline-primary btn-lg px-4">
+                    로그인
+                  </Link>
+                </>
+              )}
             </div>
           </div>
           

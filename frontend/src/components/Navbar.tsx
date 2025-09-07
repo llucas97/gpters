@@ -1,6 +1,13 @@
 import { Link } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 const Navbar = () => {
+  const { isAuthenticated, user, logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+  }
+
   return (
     <nav className="navbar navbar-expand-lg">
       <div className="container">
@@ -45,16 +52,39 @@ const Navbar = () => {
                 프로필
               </Link>
             </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/login">
-                로그인
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link btn btn-primary text-white px-3 ms-2" to="/signup">
-                회원가입
-              </Link>
-            </li>
+            
+            {isAuthenticated ? (
+              <>
+                <li className="nav-item dropdown">
+                  <span className="nav-link">
+                    <i className="bi bi-person-check me-1"></i>
+                    {user?.username || '사용자'}님
+                  </span>
+                </li>
+                <li className="nav-item">
+                  <button 
+                    className="nav-link btn btn-outline-secondary px-3 ms-2" 
+                    onClick={handleLogout}
+                    style={{ border: 'none' }}
+                  >
+                    로그아웃
+                  </button>
+                </li>
+              </>
+            ) : (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/login">
+                    로그인
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link btn btn-primary text-white px-3 ms-2" to="/signup">
+                    회원가입
+                  </Link>
+                </li>
+              </>
+            )}
           </ul>
         </div>
       </div>

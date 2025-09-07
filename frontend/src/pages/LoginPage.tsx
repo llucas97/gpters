@@ -1,7 +1,11 @@
 import { useState } from 'react'
-import { Link} from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { loginUser, getCurrentUser } from '../api/auth'
 
 const LoginPage = () => {
+  const navigate = useNavigate()
+  const { login } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -53,18 +57,35 @@ const LoginPage = () => {
     setIsLoading(true)
     
     try {
-      // TODO: API 호출
+      // 실제 API 호출
       console.log('로그인 시도:', formData)
+      const loginResponse = await loginUser({
+        email: formData.email,
+        password: formData.password
+      })
       
-      // 임시 성공 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log('로그인 응답:', loginResponse)
       
+      // 로그인 성공 후 사용자 정보 조회
+      const userInfo = await getCurrentUser()
+      console.log('사용자 정보:', userInfo)
+      
+      // 사용자 정보를 Context에 저장
+      const userData = {
+        id: userInfo.user_id.toString(),
+        email: userInfo.email,
+        username: userInfo.username
+      }
+      
+      login(userData)
       alert('로그인 성공!')
-      // TODO: 실제로는 사용자를 대시보드로 리다이렉트
+      
+      // 로그인 성공 후 홈으로 이동
+      navigate('/')
       
     } catch (error) {
       console.error('로그인 에러:', error)
-      setErrors({ general: '로그인에 실패했습니다. 다시 시도해주세요.' })
+      setErrors({ general: error instanceof Error ? error.message : '로그인에 실패했습니다. 다시 시도해주세요.' })
     } finally {
       setIsLoading(false)
     }

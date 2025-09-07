@@ -32,3 +32,52 @@ export const registerUser = async (data: {
   return response.json();
 };
 
+export const loginUser = async (data: {
+  email: string;
+  password: string;
+}) => {
+  const response = await fetch(`${API_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // 세션 쿠키를 포함
+    body: JSON.stringify({
+      email: data.email,
+      password: data.password,
+    }),
+  });
+
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      const error = await response.json();
+      throw new Error(error.message || '로그인 실패');
+    } else {
+      const text = await response.text();
+      throw new Error(`서버 오류: ${text.slice(0, 100)}...`);
+    }
+  }
+
+  return response.json();
+};
+
+export const getCurrentUser = async () => {
+  const response = await fetch(`${API_URL}/api/auth/me`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // 세션 쿠키를 포함
+  });
+
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      const error = await response.json();
+      throw new Error(error.message || '사용자 정보 조회 실패');
+    } else {
+      const text = await response.text();
+      throw new Error(`서버 오류: ${text.slice(0, 100)}...`);
+    }
+  }
+
+  return response.json();
+};
+

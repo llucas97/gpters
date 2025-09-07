@@ -10,6 +10,35 @@ router.post('/login', passport.authenticate('local'), (req, res) => {
   res.json({ success: true, user_id: req.user.user_id });
 });
 
+// ✅ 현재 로그인된 사용자 정보 조회
+router.get('/me', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ message: '로그인이 필요합니다.' });
+  }
+
+  try {
+    const user = await User.findByPk(req.user.user_id, {
+      attributes: ['user_id', 'email', 'username', 'full_name', 'current_level', 'profile_image_url']
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+    }
+
+    res.json({
+      user_id: user.user_id,
+      email: user.email,
+      username: user.username,
+      full_name: user.full_name,
+      current_level: user.current_level,
+      profile_image_url: user.profile_image_url
+    });
+  } catch (err) {
+    console.error('❌ 사용자 정보 조회 에러:', err);
+    res.status(500).json({ message: '서버 오류', error: err.message });
+  }
+});
+
 router.post('/signup', async (req, res) => {
   // 디버깅: 받은 데이터 확인
   console.log('🔍 받은 req.body:', req.body);
