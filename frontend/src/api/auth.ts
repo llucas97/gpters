@@ -7,7 +7,7 @@ export const registerUser = async (data: {
   username: string;
   fullName: string;   // 프론트에서 변수는 그대로 fullName
 }) => {
-  const response = await fetch(`${API_URL}/auth/signup`, {
+  const response = await fetch(`${API_URL}/api/auth/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

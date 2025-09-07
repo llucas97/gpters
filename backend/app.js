@@ -48,10 +48,8 @@ app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/profile', profileRoutes);
 app.use('/api/survey', surveyRouter);
-app.use('/api/profile', profileRoutes);
 app.use('/api/problems', problemRoutes);
 app.use('/survey', surveyRouter);
-app.use('/', localAuthRoutes);
 
 // 새로운 테스트 시스템 API 라우터들
 app.use('/api/results', resultRoutes);
