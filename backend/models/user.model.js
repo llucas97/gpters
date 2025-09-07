@@ -62,6 +62,30 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false,
       },
 
+      // 레벨테스트 관련 필드
+      level: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+        comment: '레벨테스트 결과 레벨 (0-5)',
+      },
+      level_test_score: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: '레벨테스트 점수',
+      },
+      level_test_completed: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: '레벨테스트 완료 여부',
+      },
+      level_test_date: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: '레벨테스트 완료 날짜',
+      },
+
       // 계정 상태
       is_active: {
         type: DataTypes.BOOLEAN,

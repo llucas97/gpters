@@ -34,6 +34,12 @@ const Navbar = () => {
               </Link>
             </li>
             <li className="nav-item">
+              <Link className="nav-link" to="/level-test">
+                <i className="bi bi-award me-1"></i>
+                레벨테스트
+              </Link>
+            </li>
+            <li className="nav-item">
               <Link className="nav-link" to="/profile">
                 <i className="bi bi-person-circle me-1"></i>
                 프로필

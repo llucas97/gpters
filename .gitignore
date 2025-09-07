@@ -24,9 +24,6 @@ node_modules/
 # OS specific
 .DS_Store
 
-# Task files
-# tasks.json
-# tasks/ 
 DB_HOST=34.64.121.130
 DB_PORT=3306
 DB_USER=root
@@ -42,3 +39,7 @@ GITHUB_CLIENT_ID=Ov23li2DyE9AW8kfs5Ck
 GITHUB_CLIENT_SECRET=1c9401c318367734e56c9aa42028ac08a0f1381d
 CALLBACK_BASE_URL=http://localhost:3000/auth
 modules/
+
+# Task files
+tasks.json
+tasks/ 
