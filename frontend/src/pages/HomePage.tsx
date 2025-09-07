@@ -32,9 +32,11 @@ const HomePage = () => {
                   <Link to="/level-test" className="btn btn-primary btn-lg px-4">
                     🎯 레벨테스트 시작
                   </Link>
-                  <Link to="/survey" className="btn btn-outline-primary btn-lg px-4">
-                    📋 설문조사
-                  </Link>
+                  {!user?.survey_completed && (
+                    <Link to="/survey" className="btn btn-outline-primary btn-lg px-4">
+                      📋 설문조사
+                    </Link>
+                  )}
                 </>
               ) : (
                 <>
