@@ -8,6 +8,8 @@ import ProfilePage from './pages/ProfilePage'
 import SurveyPage from './pages/SurveyPage'
 import LevelTestPage from './pages/LevelTestPage'
 
+import QuizPage from './pages/QuizPage'
+
 function App() {
   return (
     <AuthProvider>
@@ -21,6 +23,7 @@ function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/survey" element={<SurveyPage />} />
             <Route path="/level-test" element={<LevelTestPage />} />
+            <Route path="/quiz" element={<QuizPage />} />
           </Routes>
         </main>
       </div>

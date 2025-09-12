@@ -9,6 +9,14 @@ const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 
 module.exports = () => {
+  
+  //테스트하려고 잠깐 수정
+  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL } = process.env;
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_CALLBACK_URL) {
+    console.warn('[auth] Google OAuth disabled: missing GOOGLE_* env. Skipping passport-google-oauth20.');
+    return;
+  }
+
   passport.serializeUser((user, done) => {
     done(null, user.user_id);
   });
