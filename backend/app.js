@@ -6,9 +6,8 @@ const session = require('express-session');
 const passport = require('passport');
 require('dotenv').config();
 const path = require('path');
-// const authRoutes = require('./auth/routes');
 const initPassport = require('./auth/passport');
-const localAuthRoutes = require('./routes/localAuth');  // 로컬 회원가입 라우터
+const localAuthRoutes = require('./routes/localAuth');
 const db = require('./models');
 const surveyRouter = require('./routes/survey');
 const profileRoutes = require('./routes/profile');

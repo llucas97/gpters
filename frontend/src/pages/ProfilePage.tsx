@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ProfilePage.css';
-import { fetchProfile, updateProfile } from '../api/profile'; // 🔹 프로필 조회/수정 API
+import { fetchProfile, updateProfile } from '../api/profile';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface UserProfile {
   id: string;
@@ -56,35 +58,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 //   }
 // };
 
-const uploadProfileImage = async (userId: string, imageData: string): Promise<string> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/profile/${userId}/upload-image`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        imageData,
-        imageType: 'base64'
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || '이미지 업로드에 실패했습니다.');
-    }
-
-    const result = await response.json();
-    return result.data.imageUrl;
-  } catch (error) {
-    console.error('Image upload error:', error);
-    throw error;
-  }
-};
+// 이미지 업로드는 프로필 업데이트와 함께 처리됩니다
 
 const ProfilePage: React.FC = () => {
-  // 현재는 하드코딩된 사용자 ID 사용 (추후 인증 시스템에서 가져올 예정)
-  const currentUserId = '1';
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -94,37 +72,28 @@ const ProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 컴포넌트 마운트 시 프로필 데이터 로드
+  // 컴포넌트 마운트 시 인증 확인 및 프로필 데이터 로드
   useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
     loadProfile();
-  }, []);
+  }, [isAuthenticated, navigate]);
 
   const loadProfile = async () => {
+    if (!isAuthenticated) return;
+    
     try {
       setIsLoading(true);
       setError(null);
       
-      const profileData = await fetchProfile(currentUserId);
+      const profileData = await fetchProfile();
       setProfile(profileData);
       setEditedProfile(profileData);
     } catch (error) {
-      // 실제 API가 없거나 사용자가 없을 경우 기본 데이터 사용
-      console.warn('API에서 프로필을 불러올 수 없어 기본 데이터를 사용합니다:', error);
-      
-      const defaultProfile: UserProfile = {
-        id: currentUserId,
-        username: 'user123',
-        email: 'user@example.com',
-        name: '홍길동',
-        bio: '코딩을 좋아하는 개발자입니다.',
-        location: '서울, 대한민국',
-        website: 'https://example.com',
-        joinDate: '2024-01-15'
-      };
-      
-      setProfile(defaultProfile);
-      setEditedProfile(defaultProfile);
-      setError('서버에 연결할 수 없어 임시 데이터를 표시합니다.');
+      console.error('프로필 로드 실패:', error);
+      setError('프로필을 불러오는데 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
@@ -150,19 +119,14 @@ const ProfilePage: React.FC = () => {
         const imageData = event.target?.result as string;
         
         try {
-          // 실제 API로 이미지 업로드 시도
-          const imageUrl = await uploadProfileImage(currentUserId, imageData);
-          setEditedProfile(prev => ({
-            ...prev!,
-            profileImage: imageUrl
-          }));
-        } catch (error) {
-          // API 실패 시 로컬 미리보기만 표시
-          console.warn('이미지 업로드 API 실패, 로컬 미리보기만 표시:', error);
+          // 로컬 미리보기 표시 (실제 업로드는 저장 시 처리)
           setEditedProfile(prev => ({
             ...prev!,
             profileImage: imageData
           }));
+        } catch (error) {
+          console.error('이미지 처리 실패:', error);
+          alert('이미지 처리 중 오류가 발생했습니다.');
         }
       };
       reader.readAsDataURL(file);
@@ -177,8 +141,7 @@ const ProfilePage: React.FC = () => {
     
     setIsSaving(true);
     try {
-      // 실제 API로 프로필 업데이트 시도
-      const updatedProfile = await updateProfile(currentUserId, {
+      const updatedProfile = await updateProfile({
         username: editedProfile.username,
         name: editedProfile.name,
         email: editedProfile.email,
@@ -195,14 +158,9 @@ const ProfilePage: React.FC = () => {
       
       alert('프로필이 성공적으로 업데이트되었습니다!');
     } catch (error) {
-      // API 실패 시 로컬 상태만 업데이트
-      console.warn('프로필 업데이트 API 실패, 로컬 상태만 업데이트:', error);
-      
-      setProfile(editedProfile);
-      setIsEditing(false);
-      
+      console.error('프로필 업데이트 실패:', error);
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-      alert(`서버 업데이트에 실패했지만 로컬 변경사항은 저장되었습니다.\n오류: ${errorMessage}`);
+      setError(`프로필 업데이트에 실패했습니다: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -217,6 +175,32 @@ const ProfilePage: React.FC = () => {
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
+
+  // 로그인하지 않은 사용자 처리
+  if (!isAuthenticated) {
+    return (
+      <div className="profile-page">
+        <div className="container py-5">
+          <div className="row justify-content-center">
+            <div className="col-md-8 col-lg-6">
+              <div className="card profile-card">
+                <div className="card-body p-4 text-center">
+                  <h3>로그인이 필요합니다</h3>
+                  <p className="text-muted">프로필을 보려면 먼저 로그인해주세요.</p>
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => navigate('/login')}
+                  >
+                    로그인하러 가기
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
