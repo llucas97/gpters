@@ -4,26 +4,17 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const KakaoStrategy = require('passport-kakao').Strategy;
 const GitHubStrategy = require('passport-github2').Strategy;
 const db = require('../models');
-const { User } = db;
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 
 module.exports = () => {
-  
-  //테스트하려고 잠깐 수정
-  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL } = process.env;
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_CALLBACK_URL) {
-    console.warn('[auth] Google OAuth disabled: missing GOOGLE_* env. Skipping passport-google-oauth20.');
-    return;
-  }
-
   passport.serializeUser((user, done) => {
     done(null, user.user_id);
   });
 
   passport.deserializeUser(async (id, done) => {
     try {
-      const user = await User.findByPk(id);
+      const user = await db.User.findByPk(id);
       done(null, user);
     } catch (err) {
       done(err);
@@ -38,7 +29,7 @@ module.exports = () => {
     try {
       console.log('🔍 Passport 로그인 시도:', email);
       
-      const user = await User.findOne({ where: { email } });
+      const user = await db.User.findOne({ where: { email } });
       if (!user) {
         console.log('❌ 사용자 없음:', email);
         return done(null, false, { message: '존재하지 않는 사용자입니다' });
@@ -63,7 +54,7 @@ module.exports = () => {
   // ✅ 공통: 소셜 로그인 시 DB에 저장 또는 조회
   const findOrCreateSocialUser = async (provider, profile, email, displayName, photoUrl, done) => {
     try {
-      const [user, created] = await User.findOrCreate({
+      const [user, created] = await db.User.findOrCreate({
         where: { provider, provider_id: profile.id },
         defaults: {
           email,
@@ -84,17 +75,21 @@ module.exports = () => {
     }
   };
 
-  // ✅ Google
-  passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: `${process.env.CALLBACK_BASE_URL}/google/callback`,
-  }, async (accessToken, refreshToken, profile, done) => {
-    const email = profile.emails?.[0]?.value;
-    const name = profile.displayName;
-    const photo = profile.photos?.[0]?.value;
-    await findOrCreateSocialUser('google', profile, email, name, photo, done);
-  }));
+  // ✅ Google (조건부 설정)
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: `${process.env.CALLBACK_BASE_URL}/google/callback`,
+    }, async (accessToken, refreshToken, profile, done) => {
+      const email = profile.emails?.[0]?.value;
+      const name = profile.displayName;
+      const photo = profile.photos?.[0]?.value;
+      await findOrCreateSocialUser('google', profile, email, name, photo, done);
+    }));
+  } else {
+    console.warn('[auth] Google OAuth disabled: missing GOOGLE_* env variables');
+  }
 
   // ✅ Kakao
   passport.use(new KakaoStrategy({

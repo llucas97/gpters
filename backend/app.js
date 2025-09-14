@@ -48,6 +48,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ✅ 테스트 라우트 (데이터베이스 연결 확인)
+app.get('/api/test', async (req, res) => {
+  try {
+    await db.sequelize.authenticate();
+    res.json({ success: true, message: 'Database connection successful' });
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    res.status(500).json({ success: false, message: 'Database connection failed', error: error.message });
+  }
+});
+
+// ✅ API 라우터들
+app.use('/api/auth', localAuthRoutes);     // 로그인/회원가입
 app.use('/api/profile', profileRoutes);
 app.use('/api/survey', surveyRouter);
 app.use('/api/problems', problemRoutes);
@@ -60,32 +74,12 @@ app.use('/api/analysis', analysisRoutes);
 
 app.use('/api/quiz', quizRoutes);
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
-
-app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public/login.html')));
-
-app.get('/signup', (req, res) => res.sendFile(path.join(__dirname, 'public/signup.html')));
-
-app.get('/survey', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/survey.html'));
-});
-
-app.get('/home', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/home.html'));
-});
-
-app.get('/profile', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/profile.html'));
-});
-
-app.get('/level-test', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/level-test.html'));
-});
+// API 전용 백엔드 - HTML 라우트 제거됨
 
 app.get('/logout', (req, res, next) => {
   req.logout(err => {
     if (err) return next(err);
-    res.redirect('/login');  
+    res.redirect('/login');
   });
 });
 

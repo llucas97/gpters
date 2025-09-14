@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { User } = require('../models');
+const db = require('../models');
 const passport = require('passport');
 const router = express.Router();
 
@@ -17,7 +17,7 @@ router.get('/me', async (req, res) => {
   }
 
   try {
-    const user = await User.findByPk(req.user.user_id, {
+    const user = await db.User.findByPk(req.user.user_id, {
       attributes: ['user_id', 'email', 'username', 'full_name', 'current_level', 'profile_image_url', 'survey_completed']
     });
 
@@ -53,7 +53,7 @@ router.post('/signup', async (req, res) => {
   const { email, password, username, full_name } = req.body;
 
   try {
-    const exists = await User.findOne({ where: { email } });
+    const exists = await db.User.findOne({ where: { email } });
     if (exists) return res.status(409).json({ message: '이미 등록된 이메일입니다.' });
 
     const hashed = await bcrypt.hash(password, 10);
@@ -64,7 +64,7 @@ router.post('/signup', async (req, res) => {
     console.log('  - full_name:', full_name);
 
 
-    const user = await User.create({
+    const user = await db.User.create({
       email,
       username,
       full_name,
