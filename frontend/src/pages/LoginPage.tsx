@@ -74,7 +74,8 @@ const LoginPage = () => {
       const userData = {
         id: userInfo.user_id.toString(),
         email: userInfo.email,
-        username: userInfo.username
+        username: userInfo.username,
+        survey_completed: userInfo.survey_completed
       }
       
       login(userData)

@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+
 const cors = require('cors');
 const express = require('express');
 const session = require('express-session');
@@ -18,7 +20,7 @@ const levelRoutes = require('./routes/levelRoutes');
 const analysisRoutes = require('./routes/analysisRoutes');
 const levelTestRoutes = require('./routes/levelTest');
 
-
+const quizRoutes = require('./routes/quiz');
 
 const app = express();
 initPassport();
@@ -56,7 +58,7 @@ app.use('/api/results', resultRoutes);
 app.use('/api/level', levelRoutes);
 app.use('/api/analysis', analysisRoutes);
 
-
+app.use('/api/quiz', quizRoutes);
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 

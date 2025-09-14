@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './SurveyPage.css';
 import { submitSurvey } from '../api/survey'; // 🔹 설문 결과 저장 API
+import { useAuth } from '../contexts/AuthContext';
 
 
 interface SurveyData {
@@ -273,6 +274,7 @@ const Step4: React.FC<StepProps> = ({ data, onDataChange, onPrev, isValid, isSub
 };
 
 const SurveyPage: React.FC = () => {
+  const { user, login } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [surveyData, setSurveyData] = useState<SurveyData>({
@@ -310,6 +312,15 @@ const SurveyPage: React.FC = () => {
       const result = await submitSurvey(surveyData);
       
       console.log('설문조사 제출 성공:', result);
+      
+      // AuthContext의 사용자 정보 업데이트
+      if (user) {
+        const updatedUser = {
+          ...user,
+          survey_completed: true
+        };
+        login(updatedUser);
+      }
       
       // 성공 메시지 표시
       alert(`설문조사가 완료되었습니다! 감사합니다.\n\n설문 ID: ${result.data.surveyId}\n제출 시간: ${new Date(result.data.submittedAt).toLocaleString('ko-KR')}`);

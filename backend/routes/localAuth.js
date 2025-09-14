@@ -18,7 +18,7 @@ router.get('/me', async (req, res) => {
 
   try {
     const user = await User.findByPk(req.user.user_id, {
-      attributes: ['user_id', 'email', 'username', 'full_name', 'current_level', 'profile_image_url']
+      attributes: ['user_id', 'email', 'username', 'full_name', 'current_level', 'profile_image_url', 'survey_completed']
     });
 
     if (!user) {
@@ -31,7 +31,8 @@ router.get('/me', async (req, res) => {
       username: user.username,
       full_name: user.full_name,
       current_level: user.current_level,
-      profile_image_url: user.profile_image_url
+      profile_image_url: user.profile_image_url,
+      survey_completed: user.survey_completed
     });
   } catch (err) {
     console.error('❌ 사용자 정보 조회 에러:', err);
