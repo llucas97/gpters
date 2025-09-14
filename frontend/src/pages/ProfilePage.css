@@ -1,7 +1,9 @@
 .profile-page {
   min-height: calc(100vh - 76px);
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding-top: 2rem;
+  padding: 2rem 1rem;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .profile-card {
@@ -11,6 +13,8 @@
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  width: 100%;
+  max-width: 100%;
 }
 
 .profile-card:hover {
@@ -92,4 +96,79 @@
 
 .profile-page .text-muted {
   color: #6b7280 !important;
+}
+
+/* 반응형 디자인 개선 */
+.profile-page .container {
+  width: 100%;
+  max-width: 100%;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.profile-page .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.profile-page .col-md-8,
+.profile-page .col-lg-6 {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 1rem 0.5rem;
+  }
+  
+  .profile-card {
+    margin: 0;
+    border-radius: 12px;
+  }
+  
+  .profile-card .card-body {
+    padding: 1.5rem !important;
+  }
+  
+  .profile-page .row .col-md-6 {
+    margin-bottom: 1rem;
+  }
+  
+  .profile-page .d-flex.gap-2 {
+    flex-direction: column;
+    gap: 0.5rem !important;
+  }
+  
+  .profile-page .d-flex.gap-2 .btn {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* 태블릿 최적화 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .profile-page .container {
+    max-width: 90%;
+  }
+}
+
+/* 폼 요소 반응형 */
+.profile-page .form-control,
+.profile-page .form-select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 버튼 그룹 반응형 */
+.profile-page .d-flex.gap-2 {
+  gap: 0.75rem;
+}
+
+@media (max-width: 576px) {
+  .profile-page .d-flex.gap-2 {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 } 

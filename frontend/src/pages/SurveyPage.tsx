@@ -8,6 +8,7 @@ interface SurveyData {
   occupation: string;
   purpose: string;
   level: string;
+  preferredLanguage: string;
   motivation: string;
 }
 
@@ -215,8 +216,68 @@ const Step3: React.FC<StepProps> = ({ data, onDataChange, onNext, onPrev, isVali
   );
 };
 
-// 4단계: 가입 동기
-const Step4: React.FC<StepProps> = ({ data, onDataChange, onPrev, isValid, isSubmitting, onNext }) => {
+// 4단계: 선호 프로그래밍 언어
+const Step4: React.FC<StepProps> = ({ data, onDataChange, onNext, onPrev, isValid }) => {
+  const languages = [
+    { value: 'javascript', label: 'JavaScript', icon: '🟨', description: '웹 개발의 핵심 언어' },
+    { value: 'python', label: 'Python', icon: '🐍', description: '데이터 사이언스와 AI' },
+    { value: 'java', label: 'Java', icon: '☕', description: '엔터프라이즈 개발' },
+    { value: 'cpp', label: 'C++', icon: '⚡', description: '시스템 프로그래밍' },
+    { value: 'csharp', label: 'C#', icon: '🔷', description: 'Microsoft 생태계' },
+    { value: 'go', label: 'Go', icon: '🐹', description: '클라우드와 백엔드' },
+    { value: 'rust', label: 'Rust', icon: '🦀', description: '안전한 시스템 언어' },
+    { value: 'typescript', label: 'TypeScript', icon: '🔷', description: '타입 안전한 JavaScript' },
+    { value: 'kotlin', label: 'Kotlin', icon: '🟣', description: '모던 안드로이드 개발' },
+    { value: 'swift', label: 'Swift', icon: '🍎', description: 'iOS 앱 개발' },
+    { value: 'php', label: 'PHP', icon: '🐘', description: '웹 백엔드 개발' },
+    { value: 'ruby', label: 'Ruby', icon: '💎', description: '우아한 웹 개발' },
+    { value: 'other', label: '기타', icon: '🔧', description: '다른 언어를 선호' }
+  ];
+
+  return (
+    <div className="survey-step">
+      <h3 className="step-title">어떤 프로그래밍 언어를 선호하시나요?</h3>
+      <p className="step-description">가장 관심있거나 배우고 싶은 언어를 선택해주세요</p>
+      
+      <div className="language-options">
+        {languages.map((option) => (
+          <div
+            key={option.value}
+            className={`language-card ${data.preferredLanguage === option.value ? 'selected' : ''}`}
+            onClick={() => onDataChange({ preferredLanguage: option.value })}
+          >
+            <div className="language-header">
+              <div className="language-icon">{option.icon}</div>
+              <div className="language-label">{option.label}</div>
+            </div>
+            <div className="language-description">{option.description}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="step-actions">
+        <button
+          className="btn btn-outline-secondary btn-lg"
+          onClick={onPrev}
+        >
+          <i className="bi bi-arrow-left me-2"></i>
+          이전
+        </button>
+        <button
+          className="btn btn-primary btn-lg"
+          onClick={onNext}
+          disabled={!isValid}
+        >
+          다음 단계
+          <i className="bi bi-arrow-right ms-2"></i>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// 5단계: 가입 동기
+const Step5: React.FC<StepProps> = ({ data, onDataChange, onPrev, isValid, isSubmitting, onNext }) => {
   return (
     <div className="survey-step">
       <h3 className="step-title">Gpters에 가입하게 된 동기는 무엇인가요?</h3>
@@ -281,10 +342,11 @@ const SurveyPage: React.FC = () => {
     occupation: '',
     purpose: '',
     level: '',
+    preferredLanguage: '',
     motivation: ''
   });
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   const handleDataChange = (newData: Partial<SurveyData>) => {
     setSurveyData(prev => ({ ...prev, ...newData }));
@@ -348,6 +410,8 @@ const SurveyPage: React.FC = () => {
       case 3:
         return !!surveyData.level;
       case 4:
+        return !!surveyData.preferredLanguage;
+      case 5:
         return surveyData.motivation.trim().length >= 10;
       default:
         return false;
@@ -375,6 +439,8 @@ const SurveyPage: React.FC = () => {
         return <Step3 {...stepProps} />;
       case 4:
         return <Step4 {...stepProps} />;
+      case 5:
+        return <Step5 {...stepProps} />;
       default:
         return null;
     }
@@ -409,7 +475,8 @@ const SurveyPage: React.FC = () => {
                   <span className={currentStep >= 1 ? 'active' : ''}>직업</span>
                   <span className={currentStep >= 2 ? 'active' : ''}>목적</span>
                   <span className={currentStep >= 3 ? 'active' : ''}>레벨</span>
-                  <span className={currentStep >= 4 ? 'active' : ''}>동기</span>
+                  <span className={currentStep >= 4 ? 'active' : ''}>언어</span>
+                  <span className={currentStep >= 5 ? 'active' : ''}>동기</span>
                 </div>
               </div>
 

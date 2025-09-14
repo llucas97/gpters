@@ -182,7 +182,7 @@ const ProfilePage: React.FC = () => {
       <div className="profile-page">
         <div className="container py-5">
           <div className="row justify-content-center">
-            <div className="col-md-8 col-lg-6">
+            <div className="col-12 col-md-10 col-lg-8 col-xl-6">
               <div className="card profile-card">
                 <div className="card-body p-4 text-center">
                   <h3>로그인이 필요합니다</h3>
@@ -207,7 +207,7 @@ const ProfilePage: React.FC = () => {
       <div className="profile-page">
         <div className="container py-5">
           <div className="row justify-content-center">
-            <div className="col-md-8 col-lg-6">
+            <div className="col-12 col-md-10 col-lg-8 col-xl-6">
               <div className="card profile-card">
                 <div className="card-body p-4 text-center">
                   <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }}>
@@ -228,7 +228,7 @@ const ProfilePage: React.FC = () => {
       <div className="profile-page">
         <div className="container py-5">
           <div className="row justify-content-center">
-            <div className="col-md-8 col-lg-6">
+            <div className="col-12 col-md-10 col-lg-8 col-xl-6">
               <div className="card profile-card">
                 <div className="card-body p-4 text-center">
                   <h3 className="text-danger">프로필을 불러올 수 없습니다</h3>
