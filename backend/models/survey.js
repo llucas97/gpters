@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'Users', // ✅ 반드시 Users와 대소문자 일치
+        model: 'users', // ✅ 실제 테이블명과 일치
         key: 'user_id',
       },
       onDelete: 'CASCADE',
@@ -24,8 +24,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     current_skill_level: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER,
       allowNull: false,
+      validate: {
+        min: 1,
+        max: 4
+      }
     },
     motivation: {
       type: DataTypes.TEXT,
@@ -33,7 +37,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     time_availability: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true, // optional로 변경
     },
     preferred_language: {
       type: DataTypes.STRING,

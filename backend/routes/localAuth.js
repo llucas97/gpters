@@ -5,9 +5,26 @@ const passport = require('passport');
 const router = express.Router();
 
 // ✅ 로그인 - 세션 기반
-router.post('/login', passport.authenticate('local'), (req, res) => {
-  // passport가 자동으로 req.login() 수행 → 세션에 저장됨
-  res.json({ success: true, user_id: req.user.user_id });
+router.post('/login', passport.authenticate('local'), async (req, res) => {
+  try {
+    // passport가 자동으로 req.login() 수행 → 세션에 저장됨
+    const user = await db.User.findByPk(req.user.user_id, {
+      attributes: ['user_id', 'email', 'username', 'full_name', 'survey_completed']
+    });
+
+    res.json({ 
+      success: true, 
+      user: {
+        id: user.user_id,
+        email: user.email,
+        username: user.username,
+        survey_completed: user.survey_completed
+      }
+    });
+  } catch (err) {
+    console.error('❌ 로그인 응답 처리 에러:', err);
+    res.status(500).json({ message: '서버 오류', error: err.message });
+  }
 });
 
 // ✅ 현재 로그인된 사용자 정보 조회

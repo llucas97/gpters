@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './SurveyPage.css';
-import { submitSurvey } from '../api/survey'; // 🔹 설문 결과 저장 API
+import { submitSurvey, getSurveyStatus } from '../api/survey'; // 🔹 설문 결과 저장 API
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 
 interface SurveyData {
@@ -335,7 +336,8 @@ const Step5: React.FC<StepProps> = ({ data, onDataChange, onPrev, isValid, isSub
 };
 
 const SurveyPage: React.FC = () => {
-  const { user, login } = useAuth();
+  const { user, login, isAuthenticated, updateUser } = useAuth();
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [surveyData, setSurveyData] = useState<SurveyData>({
@@ -347,6 +349,75 @@ const SurveyPage: React.FC = () => {
   });
 
   const totalSteps = 5;
+
+  // 로그인하지 않은 사용자 처리
+  if (!isAuthenticated) {
+    return (
+      <div className="container py-5">
+        <div className="row justify-content-center">
+          <div className="col-md-8 col-lg-6">
+            <div className="card">
+              <div className="card-body p-4 text-center">
+                <h3>로그인이 필요합니다</h3>
+                <p className="text-muted">설문조사를 진행하려면 먼저 로그인해주세요.</p>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => navigate('/login')}
+                >
+                  로그인하러 가기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // useEffect로 실시간 설문조사 상태 확인
+  useEffect(() => {
+    const checkSurveyStatus = async () => {
+      if (!isAuthenticated) return;
+      
+      try {
+        const response = await getSurveyStatus();
+        if (response.data.completed) {
+          // 사용자 정보 업데이트
+          updateUser({ survey_completed: true });
+        }
+      } catch (error) {
+        console.error('설문조사 상태 확인 실패:', error);
+      }
+    };
+
+    checkSurveyStatus();
+  }, [isAuthenticated, updateUser]);
+
+  // 이미 설문조사를 완료한 경우
+  if (user?.survey_completed) {
+    return (
+      <div className="container py-5">
+        <div className="row justify-content-center">
+          <div className="col-md-8 col-lg-6">
+            <div className="card">
+              <div className="card-body p-4 text-center">
+                <div className="alert alert-info">
+                  <h4>✅ 이미 설문조사를 시행했습니다!</h4>
+                  <p className="mb-0">설문조사는 한 번만 참여할 수 있습니다. 감사합니다!</p>
+                </div>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => navigate('/home')}
+                >
+                  홈으로 가기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleDataChange = (newData: Partial<SurveyData>) => {
     setSurveyData(prev => ({ ...prev, ...newData }));
@@ -376,19 +447,15 @@ const SurveyPage: React.FC = () => {
       console.log('설문조사 제출 성공:', result);
       
       // AuthContext의 사용자 정보 업데이트
-      if (user) {
-        const updatedUser = {
-          ...user,
-          survey_completed: true
-        };
-        login(updatedUser);
-      }
+      updateUser({ survey_completed: true });
       
       // 성공 메시지 표시
       alert(`설문조사가 완료되었습니다! 감사합니다.\n\n설문 ID: ${result.data.surveyId}\n제출 시간: ${new Date(result.data.submittedAt).toLocaleString('ko-KR')}`);
       
       // 홈페이지로 리다이렉트
-      window.location.href = '/';
+      setTimeout(() => {
+        navigate('/home');
+      }, 2000);
       
     } catch (error) {
       console.error('설문조사 제출 실패:', error);

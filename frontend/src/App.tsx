@@ -7,7 +7,7 @@ import SignupPage from './pages/SignupPage'
 import ProfilePage from './pages/ProfilePage'
 import SurveyPage from './pages/SurveyPage'
 import LevelTestPage from './pages/LevelTestPage'
-
+import ProblemsPage from './pages/ProblemsPage'
 import QuizPage from './pages/QuizPage'
 
 function App() {
@@ -18,11 +18,13 @@ function App() {
         <main className="main-content">
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/home" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/survey" element={<SurveyPage />} />
             <Route path="/level-test" element={<LevelTestPage />} />
+            <Route path="/problems" element={<ProblemsPage />} />
             <Route path="/quiz" element={<QuizPage />} />
           </Routes>
         </main>

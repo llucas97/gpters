@@ -66,19 +66,32 @@ const LoginPage = () => {
       
       console.log('로그인 응답:', loginResponse)
       
-      // 로그인 성공 후 사용자 정보 조회
-      const userInfo = await getCurrentUser()
-      console.log('사용자 정보:', userInfo)
-      
-      // 사용자 정보를 Context에 저장
-      const userData = {
-        id: userInfo.user_id.toString(),
-        email: userInfo.email,
-        username: userInfo.username,
-        survey_completed: userInfo.survey_completed
+      // 로그인 응답에서 사용자 정보 추출
+      if (loginResponse.user) {
+        // 사용자 정보를 Context에 저장
+        const userData = {
+          id: loginResponse.user.id.toString(),
+          email: loginResponse.user.email,
+          username: loginResponse.user.username,
+          survey_completed: loginResponse.user.survey_completed
+        }
+        
+        login(userData)
+      } else {
+        // 기존 방식으로 사용자 정보 조회
+        const userInfo = await getCurrentUser()
+        console.log('사용자 정보:', userInfo)
+        
+        const userData = {
+          id: userInfo.user_id.toString(),
+          email: userInfo.email,
+          username: userInfo.username,
+          survey_completed: userInfo.survey_completed
+        }
+        
+        login(userData)
       }
       
-      login(userData)
       alert('로그인 성공!')
       
       // 로그인 성공 후 홈으로 이동

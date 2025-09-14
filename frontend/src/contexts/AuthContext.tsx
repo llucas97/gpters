@@ -12,6 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   login: (user: User) => void
   logout: () => void
+  updateUser: (userData: Partial<User>) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -54,11 +55,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     localStorage.removeItem('user')
   }
 
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData }
+      setUser(updatedUser)
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+    }
+  }
+
   const value = {
     user,
     isAuthenticated: !!user,
     login,
-    logout
+    logout,
+    updateUser
   }
 
   return (
