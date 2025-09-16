@@ -26,6 +26,7 @@ db.Problem = require('./problem')(sequelize, DataTypes);
 db.Submission = require('./submission')(sequelize, DataTypes);
 db.Statistics = require('./statistics')(sequelize, DataTypes);
 
+db.ProblemBank = require('./problem_bank.model')(sequelize, Sequelize.DataTypes);
 
 // ✅ 모델 관계 설정
 if (db.User.associate) db.User.associate(db);
