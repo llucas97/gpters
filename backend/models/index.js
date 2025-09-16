@@ -21,6 +21,7 @@ db.sequelize = sequelize;
 db.User = require("./user.model.js")(sequelize, DataTypes);
 db.Survey = require("./survey")(sequelize, DataTypes);
 db.Problem = require('./problem')(sequelize, DataTypes);
+db.LevelTestResult = require('./levelTestResult')(sequelize, DataTypes);
 
 // ✅ 기존 스키마 기반 모델들
 db.Submission = require('./submission')(sequelize, DataTypes);
@@ -31,6 +32,7 @@ db.Statistics = require('./statistics')(sequelize, DataTypes);
 if (db.User.associate) db.User.associate(db);
 if (db.Survey.associate) db.Survey.associate(db);
 if (db.Problem.associate) db.Problem.associate(db);
+if (db.LevelTestResult.associate) db.LevelTestResult.associate(db);
 
 // ✅ 기존 스키마 모델들의 관계 설정
 if (db.Submission.associate) db.Submission.associate(db);
