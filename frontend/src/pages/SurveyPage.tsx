@@ -479,7 +479,7 @@ const SurveyPage: React.FC = () => {
       case 4:
         return !!surveyData.preferredLanguage;
       case 5:
-        return surveyData.motivation.trim().length >= 10;
+        return surveyData.motivation.trim().length >= 1;
       default:
         return false;
     }
