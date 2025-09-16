@@ -195,8 +195,11 @@ const LevelTestPage: React.FC = () => {
     
     setIsLoading(true);
     try {
-      const response = await fetch('/api/level-test', {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      
+      const response = await fetch(`${API_BASE_URL}/api/level-test/submit`, {
         method: 'POST',
+        credentials: 'include', // 세션 쿠키 포함
         headers: {
           'Content-Type': 'application/json',
         },
@@ -210,15 +213,25 @@ const LevelTestPage: React.FC = () => {
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('레벨테스트 저장 성공:', result);
         alert('레벨테스트 결과가 저장되었습니다!');
         // 홈페이지로 리다이렉트 또는 다음 단계로 이동
-        window.location.href = '/home';
+        window.location.href = '/';
       } else {
-        throw new Error('결과 저장에 실패했습니다.');
+        const errorData = await response.json().catch(() => ({ message: '알 수 없는 오류' }));
+        throw new Error(`결과 저장에 실패했습니다: ${errorData.message}`);
       }
     } catch (error) {
       console.error('Error submitting result:', error);
-      alert('결과 저장 중 오류가 발생했습니다.');
+      
+      // 더 자세한 오류 정보 표시
+      let errorMessage = '결과 저장 중 오류가 발생했습니다.';
+      if (error instanceof Error) {
+        errorMessage += `\n오류: ${error.message}`;
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }

@@ -12,7 +12,6 @@ const db = require('./models');
 const surveyRouter = require('./routes/survey');
 const profileRoutes = require('./routes/profile');
 const problemRoutes = require('./routes/problem');
-
 // 새로운 테스트 시스템 라우터들
 const resultRoutes = require('./routes/resultRoutes');
 const levelRoutes = require('./routes/levelRoutes');
@@ -65,6 +64,7 @@ app.use('/api/auth', localAuthRoutes);     // 로그인/회원가입
 app.use('/api/profile', profileRoutes);
 app.use('/api/survey', surveyRouter);
 app.use('/api/problems', problemRoutes);
+app.use('/api/level-test', levelTestRoutes);
 app.use('/survey', surveyRouter);
 
 // 새로운 테스트 시스템 API 라우터들

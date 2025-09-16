@@ -1,166 +1,107 @@
 const express = require('express');
 const router = express.Router();
-const { User, Problem } = require('../models');
-const isAuthenticated = require('../middlewares/isAuthenticated');
+const db = require('../models');
 
-// 레벨테스트 결과 저장
-router.post('/', isAuthenticated, async (req, res) => {
+// 로그인 여부 확인 미들웨어
+const isAuthenticated = (req, res, next) => {
+  console.log('🔍 레벨테스트 인증 확인 중...');
+  console.log('📌 req.isAuthenticated():', req.isAuthenticated());
+  console.log('📌 req.user:', req.user);
+  
+  if (req.isAuthenticated()) return next();
+  return res.status(401).json({ success: false, message: '로그인이 필요합니다.' });
+};
+
+// 테스트용 엔드포인트
+router.get('/test', async (req, res) => {
   try {
-    const { level, score, totalQuestions, correctAnswers, answers } = req.body;
-    const userId = req.user.id;
-
-    // 사용자 레벨 업데이트
-    await User.update(
-      { 
-        level: level,
-        level_test_score: score,
-        level_test_completed: true,
-        level_test_date: new Date()
-      },
-      { where: { id: userId } }
-    );
-
-    // 레벨테스트 결과 로그 저장 (선택사항)
-    console.log(`User ${userId} completed level test: Level ${level}, Score: ${score}/${totalQuestions}`);
-
-    res.json({
-      success: true,
-      message: '레벨테스트 결과가 저장되었습니다.',
-      data: {
-        level: level,
-        score: score,
-        totalQuestions: totalQuestions,
-        correctAnswers: correctAnswers
-      }
+    return res.status(200).json({ 
+      success: true, 
+      message: '레벨테스트 API가 정상적으로 작동합니다.',
+      timestamp: new Date().toISOString()
     });
-
-  } catch (error) {
-    console.error('Level test save error:', error);
-    res.status(500).json({
-      success: false,
-      message: '레벨테스트 결과 저장 중 오류가 발생했습니다.',
-      error: error.message
+  } catch (err) {
+    return res.status(500).json({ 
+      success: false, 
+      message: '서버 오류가 발생했습니다.', 
+      error: err.message 
     });
   }
 });
 
-// 사용자 레벨 정보 조회
-router.get('/user-level', isAuthenticated, async (req, res) => {
+// 레벨테스트 결과 저장
+router.post('/submit', isAuthenticated, async (req, res) => {
   try {
-    const userId = req.user.id;
-    
-    const user = await User.findByPk(userId, {
-      attributes: ['id', 'username', 'level', 'level_test_score', 'level_test_completed', 'level_test_date']
+    console.log('📨 레벨테스트 결과 저장 요청');
+    console.log('📌 로그인된 사용자:', req.user.user_id);
+    console.log('📌 레벨테스트 데이터:', req.body);
+
+    const { level, score, totalQuestions, correctAnswers, answers } = req.body;
+    const userId = req.user.user_id;
+
+    // User 테이블의 current_level 직접 업데이트
+    await db.User.update(
+      { 
+        current_level: level,
+        updated_at: new Date()
+      },
+      { where: { user_id: userId } }
+    );
+    console.log(`✅ 사용자 ${userId}의 레벨을 ${level}로 업데이트`);
+
+    return res.status(201).json({ 
+      success: true, 
+      message: '레벨테스트 결과가 성공적으로 저장되었습니다.',
+      data: {
+        level,
+        score,
+        userId,
+        totalQuestions,
+        correctAnswers
+      }
+    });
+  } catch (err) {
+    console.error('❌ 레벨테스트 결과 저장 중 오류:', err);
+    return res.status(500).json({ 
+      success: false, 
+      message: '서버 오류가 발생했습니다.', 
+      error: err.message 
+    });
+  }
+});
+
+// 레벨테스트 결과 조회 (사용자 현재 레벨 반환)
+router.get('/result', isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+
+    // users 테이블에서 current_level 조회
+    const user = await db.User.findOne({
+      where: { user_id: userId },
+      attributes: ['user_id', 'current_level', 'updated_at']
     });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: '사용자를 찾을 수 없습니다.'
+      return res.status(404).json({ 
+        success: false, 
+        message: '사용자를 찾을 수 없습니다.' 
       });
     }
 
-    res.json({
-      success: true,
+    return res.status(200).json({ 
+      success: true, 
       data: {
-        level: user.level || 0,
-        score: user.level_test_score || 0,
-        completed: user.level_test_completed || false,
-        testDate: user.level_test_date
+        userId: user.user_id,
+        currentLevel: user.current_level,
+        lastUpdated: user.updated_at
       }
     });
-
-  } catch (error) {
-    console.error('User level fetch error:', error);
-    res.status(500).json({
-      success: false,
-      message: '사용자 레벨 정보 조회 중 오류가 발생했습니다.',
-      error: error.message
-    });
-  }
-});
-
-// 레벨별 문제 목록 조회
-router.get('/problems/:level', async (req, res) => {
-  try {
-    const { level } = req.params;
-    const levelNum = parseInt(level);
-
-    if (isNaN(levelNum) || levelNum < 0 || levelNum > 5) {
-      return res.status(400).json({
-        success: false,
-        message: '유효하지 않은 레벨입니다. (0-5 사이의 숫자)'
-      });
-    }
-
-    const levelNames = ['beginner', 'easy', 'medium', 'hard', 'expert'];
-    const difficultyLevel = levelNames[levelNum] || 'easy';
-
-    const problems = await Problem.findAll({
-      where: { difficulty_level: difficultyLevel },
-      attributes: ['problem_id', 'title', 'description', 'difficulty_level', 'category'],
-      limit: 10,
-      order: [['created_at', 'DESC']]
-    });
-
-    res.json({
-      success: true,
-      data: {
-        level: levelNum,
-        difficulty: difficultyLevel,
-        problems: problems
-      }
-    });
-
-  } catch (error) {
-    console.error('Problems fetch error:', error);
-    res.status(500).json({
-      success: false,
-      message: '문제 목록 조회 중 오류가 발생했습니다.',
-      error: error.message
-    });
-  }
-});
-
-// 레벨테스트 통계 조회 (관리자용)
-router.get('/stats', isAuthenticated, async (req, res) => {
-  try {
-    // 관리자 권한 확인 (선택사항)
-    // if (req.user.role !== 'admin') {
-    //   return res.status(403).json({
-    //     success: false,
-    //     message: '관리자 권한이 필요합니다.'
-    //   });
-    // }
-
-    const stats = await User.findAll({
-      attributes: [
-        'level',
-        [User.sequelize.fn('COUNT', User.sequelize.col('id')), 'count']
-      ],
-      where: { level_test_completed: true },
-      group: ['level'],
-      order: [['level', 'ASC']]
-    });
-
-    const totalUsers = await User.count({
-      where: { level_test_completed: true }
-    });
-
-    res.json({
-      success: true,
-      data: {
-        totalUsers: totalUsers,
-        levelDistribution: stats
-      }
-    });
-
-  } catch (error) {
-    console.error('Level test stats error:', error);
-    res.status(500).json({
-      success: false,
-      message: '레벨테스트 통계 조회 중 오류가 발생했습니다.',
-      error: error.message
+  } catch (err) {
+    console.error('❌ 레벨테스트 결과 조회 중 오류:', err);
+    return res.status(500).json({ 
+      success: false, 
+      message: '서버 오류가 발생했습니다.', 
+      error: err.message 
     });
   }
 });
