@@ -1,24 +1,22 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { CLIENT_ID } from "../utils/clientId";
+import { ApiErrorHandler } from "../utils/apiHelpers";
+import type { GeneratedProblem, StudyLogData } from "../types/api";
 
-// HTML 이스케이프 (태그 실행 방지)
+// ===== 코드 표시 헬퍼들 (주석 제거 + 빈칸 강조) =====
 const escapeHtml = (s: string) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-// 라인/구간 주석 바로 앞의 플레이스홀더만 깔끔히 남기기
 const stripCommentedPlaceholders = (escaped: string) => {
-  // 1) 파이썬 스타일:  [indent]# __N__  →  [indent]__N__
   let out = escaped.replace(
     /(^|\n)([ \t]*)#\s*__\s*(\d+)\s*__/g,
     (_m, a, indent, d) => `${a}${indent}__${d}__`
   );
-  // 2) C/JS 블록 주석: /* __N__ */ → __N__
   out = out.replace(/\/\*\s*__\s*(\d+)\s*__\s*\*\//g, (_m, d) => `__${d}__`);
-  // 3) C/JS 라인 주석: // __N__ → __N__
   out = out.replace(/\/\/\s*__\s*(\d+)\s*__/g, (_m, d) => `__${d}__`);
   return out;
 };
-
-// __N__을 <mark>로 강조 (배경 노란색, 글자 약간 강조)
 const emphasizePlaceholders = (code: string) => {
   const escaped = escapeHtml(code);
   const noComments = stripCommentedPlaceholders(escaped);
@@ -29,32 +27,28 @@ const emphasizePlaceholders = (code: string) => {
   );
 };
 
-type Blank = {
-  id: number;
-  hint?: string;
-  answer?: string;
-};
-
-type GeneratedProblem = {
-  id?: number;
-  title: string;
-  statement?: string;
-  input_spec?: string;
-  output_spec?: string;
-  constraints?: string;
-  examples?: Array<{ input: string; output: string; explanation?: string }>;
-  code: string;
-  blanks: Blank[];
-  level?: number;
-  topic?: string;
-  language?: string;
-};
+// 타입은 별도 파일에서 import
 
 export default function QuizPage() {
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
+  if (!isAuthenticated) {
+    navigate('/login');
+    return (
+      <div className="max-w-4xl mx-auto p-4 text-center">
+        <h1 className="text-2xl font-bold text-gray-600">로그인이 필요합니다</h1>
+        <p className="mt-2 text-gray-500">잠시 후 로그인 페이지로 이동합니다...</p>
+      </div>
+    );
+  }
+
   // 생성 파라미터
-  const [level, setLevel] = useState<number>(29);
-  const [topic, setTopic] = useState<string>("graph");
+  const [level, setLevel] = useState<number | "">("");
+  const [topic, setTopic] = useState<string>("");
   const [language, setLanguage] = useState<string>("python");
+  const [randomize, setRandomize] = useState<boolean>(true); // ✅ 기본 랜덤
 
   // 데이터 & UI 상태
   const [problem, setProblem] = useState<GeneratedProblem | null>(null);
@@ -65,16 +59,39 @@ export default function QuizPage() {
   );
   const [loading, setLoading] = useState<boolean>(false);
   const [err, setErr] = useState<string>("");
+  const [startedAtMs, setStartedAtMs] = useState<number | null>(null);
 
-  // blanks 정렬 (id 오름차순)
   const orderedBlanks = useMemo(() => {
-    const arr = (problem?.blanks ?? []).slice().map((b) => {
+    const arr = (problem?.blanks ?? []).map((b) => {
       const n = Number(String(b.id).replace(/\D/g, ""));
       return { ...b, id: Number.isFinite(n) && n > 0 ? n : 1 };
     });
     arr.sort((a, b) => a.id - b.id);
     return arr;
   }, [problem]);
+
+  const randomParams = () => {
+    const topics = [
+      "graph",
+      "dp",
+      "greedy",
+      "tree",
+      "string",
+      "math",
+      "number theory",
+      "binary search",
+      "two pointers",
+      "shortest path",
+    ];
+    const langs = ["python", "javascript", "cpp", "java", "typescript"];
+    const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+    const rndLevel = 20 + Math.floor(Math.random() * 11); // 20~30
+    return {
+      level: rndLevel,
+      topic: pick(topics),
+      language: pick(langs),
+    };
+  };
 
   const fetchGeneratedProblem = async () => {
     try {
@@ -83,23 +100,31 @@ export default function QuizPage() {
       setScore(null);
       setShowAnswers(false);
 
-      const res = await fetch("/api/problem-bank/generate", {
+      const params = randomize
+        ? randomParams()
+        : {
+            level: typeof level === "number" ? level : 29,
+            topic: topic || "graph",
+            language: language || "python",
+          };
+
+      const response = await fetch("/api/problem-bank/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ level, topic, language }),
+        body: JSON.stringify(params),
       });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(`API ${res.status}: ${t}`);
-      }
-      const j: GeneratedProblem = await res.json();
 
-      // blanks 정규화 길이에 맞춰 입력칸 초기화
-      const blanksLen = (j.blanks ?? []).length;
-      setProblem(j);
-      setFills(Array(blanksLen).fill(""));
-    } catch (e: any) {
-      setErr(String(e?.message || e));
+      const problemData = await ApiErrorHandler.handleResponse<GeneratedProblem>(response);
+
+      setProblem(problemData);
+      setFills(Array((problemData.blanks ?? []).length).fill(""));
+      setStartedAtMs(Date.now());
+      // 선택적으로, 생성된 언어/주제/레벨 UI 반영
+      setLanguage(problemData.language || params.language);
+      setTopic(problemData.topic || params.topic);
+      setLevel(problemData.level ?? params.level);
+    } catch (error) {
+      setErr(ApiErrorHandler.formatError(error));
     } finally {
       setLoading(false);
     }
@@ -120,26 +145,87 @@ export default function QuizPage() {
     blanks.forEach((b, i) => {
       const a = (b.answer ?? "").trim();
       const u = (fills[i] ?? "").trim();
-      if (a.length > 0 && u.length > 0 && a === u) correct++;
+      if (a && u && a === u) correct++;
     });
     setScore({ correct, total: blanks.length });
+
+    // ---- 학습 로그 저장 (핸들 없이 client_id로) ----
+    try {
+      const duration = startedAtMs ? Date.now() - startedAtMs : null;
+      const detail = blanks.map((b, i) => ({
+        id: b.id,
+        user: (fills[i] ?? "").trim(),
+        answer: (b.answer ?? "").trim(),
+        correct: (b.answer ?? "").trim() === (fills[i] ?? "").trim(),
+      }));
+
+      const logData: StudyLogData = {
+        user_id: user?.id, // 로그인된 사용자 ID 추가
+        client_id: CLIENT_ID, // 백업용으로 유지
+        language: problem.language || "python",
+        topic: problem.topic || "unknown",
+        level: problem.level || 0,
+        source: "bank",
+        problem_id: problem.id || undefined,
+        started_at: startedAtMs
+          ? new Date(startedAtMs).toISOString()
+          : undefined,
+        finished_at: new Date().toISOString(),
+        duration_ms: duration ?? undefined,
+        blanks_total: blanks.length,
+        blanks_correct: correct,
+        blanks_detail: detail,
+      };
+
+      fetch("/api/analytics/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // 세션 쿠키 포함
+        body: JSON.stringify(logData),
+      }).catch((error) => {
+        console.warn("Failed to log study data:", error);
+      });
+    } catch (error) {
+      console.warn("Failed to prepare study log:", error);
+    }
   };
 
+  // ===== 렌더 =====
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-bold">알고리즘 빈칸 학습</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">알고리즘 빈칸 학습</h1>
+        <div className="text-sm text-gray-600">
+          안녕하세요, <span className="font-semibold text-blue-600">{user?.username}</span>님!
+        </div>
+      </div>
 
-      {/* 생성 파라미터 */}
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+      {/* 생성 파라미터 (핸들 제거, 랜덤 옵션 추가) */}
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+        <div className="flex items-center gap-2">
+          <input
+            id="rnd"
+            type="checkbox"
+            checked={randomize}
+            onChange={(e) => setRandomize(e.target.checked)}
+          />
+          <label htmlFor="rnd" className="text-sm">
+            랜덤 생성
+          </label>
+        </div>
         <div>
           <label className="block text-sm text-gray-600">Level</label>
           <input
             type="number"
             value={level}
-            onChange={(e) => setLevel(Number(e.target.value || 0))}
+            onChange={(e) =>
+              setLevel(e.target.value === "" ? "" : Number(e.target.value))
+            }
             className="w-full border rounded px-2 py-1"
             min={1}
             max={30}
+            disabled={randomize}
+            placeholder="(랜덤)"
           />
         </div>
         <div>
@@ -149,7 +235,8 @@ export default function QuizPage() {
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             className="w-full border rounded px-2 py-1"
-            placeholder="graph, dp, greedy ..."
+            placeholder="graph, dp, ..."
+            disabled={randomize}
           />
         </div>
         <div>
@@ -158,6 +245,7 @@ export default function QuizPage() {
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
             className="w-full border rounded px-2 py-1"
+            disabled={randomize}
           >
             <option value="python">python</option>
             <option value="javascript">javascript</option>
@@ -249,8 +337,8 @@ export default function QuizPage() {
                 )}
             </div>
           </section>
-          +{" "}
-          {/* 알고리즘 빈칸 문제 (검은 배경 + 흰 글자 + 빈칸 주석 제거/강조) */}
+
+          {/* 알고리즘 빈칸 문제 (검은 배경 + 흰 글자 + 빈칸 강조/주석 제거) */}
           <section>
             <h2 className="text-xl font-bold mb-2">알고리즘 빈칸 문제</h2>
             {(() => {
@@ -265,6 +353,7 @@ export default function QuizPage() {
               );
             })()}
           </section>
+
           {/* 힌트 */}
           <section>
             <h2 className="text-xl font-bold mb-2">힌트</h2>
@@ -283,6 +372,7 @@ export default function QuizPage() {
               )}
             </div>
           </section>
+
           {/* 답 입력 */}
           <section>
             <h2 className="text-xl font-bold mb-2">답을 적을 수 있는 칸</h2>
@@ -328,7 +418,8 @@ export default function QuizPage() {
               )}
             </div>
           </section>
-          {/* 정답 보기 (토글) */}
+
+          {/* 정답 보기 */}
           {showAnswers && (
             <section>
               <h2 className="text-xl font-bold mb-2">정답</h2>
@@ -342,7 +433,7 @@ export default function QuizPage() {
                     {orderedBlanks.map((b) => (
                       <li key={b.id}>
                         빈칸 {b.id}:{" "}
-                        <code className="bg-gray-100 px-1 rounded">
+                        <code className="bg-gray-100 px-1 rounded text-gray-800">
                           {b.answer ?? "(제공되지 않음)"}
                         </code>
                       </li>

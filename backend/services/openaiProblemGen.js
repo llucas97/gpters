@@ -106,11 +106,31 @@ async function generateProblem({ level = 10, topic = 'graph', language = 'python
   let code = String(data.code_template || '');
   code = normalizePlaceholders(code, language, data.blanks.length);
   const phCount = countPlaceholders(code);
+  
+  // placeholder와 blanks 개수가 맞지 않을 때 조정
   if (phCount !== data.blanks.length) {
-    if (phCount === 0 && data.blanks.length > 0) {
-      let i = 1;
+    console.warn(`Placeholder count mismatch: placeholders(${phCount}) != blanks(${data.blanks.length})`);
+    
+    if (phCount > data.blanks.length) {
+      // placeholder가 더 많으면 blanks를 추가
+      const needed = phCount - data.blanks.length;
+      for (let i = 0; i < needed; i++) {
+        data.blanks.push({
+          id: data.blanks.length + i + 1,
+          answer: '???',
+          hint: 'Fill in the blank'
+        });
+      }
+    } else if (phCount < data.blanks.length) {
+      // blanks가 더 많으면 blanks를 줄임
+      data.blanks = data.blanks.slice(0, phCount);
     }
-    throw new Error(`placeholders(${phCount}) != blanks(${data.blanks.length})`);
+    
+    // 여전히 0개라면 최소 1개는 만들기
+    if (phCount === 0 && data.blanks.length === 0) {
+      code = code + '\n# __1__ # Complete this line';
+      data.blanks = [{ id: 1, answer: 'pass', hint: 'Complete the implementation' }];
+    }
   }
 
   return {
