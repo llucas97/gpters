@@ -22,6 +22,7 @@ const quizRoutes = require('./routes/quiz');
 const problemBankRoutes = require('./routes/problemBank');
 const analyticsRoutes = require('./routes/analytics');
 const solveRoutes = require('./routes/solve');
+const bojRoutes = require('./routes/boj');
 
 const app = express();
 initPassport();
@@ -78,6 +79,7 @@ app.use('/api/quiz', quizRoutes);
 app.use('/api/problem-bank', problemBankRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/solve', solveRoutes);
+app.use('/api/boj', bojRoutes);
 
 // API 전용 백엔드 - HTML 라우트 제거됨
 

@@ -11,3 +11,4 @@ CREATE INDEX idx_study_sessions_client_id ON study_sessions(client_id);
 UPDATE study_sessions 
 SET handle = 'anonymous' 
 WHERE handle IS NULL OR handle = '';
+

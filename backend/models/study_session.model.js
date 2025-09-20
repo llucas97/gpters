@@ -8,6 +8,7 @@ module.exports = (sequelize, DataTypes) => {
     language: { type: DataTypes.STRING(32), allowNull: false },
     topic: { type: DataTypes.STRING(64), allowNull: false },
     level: { type: DataTypes.INTEGER, allowNull: false },
+    boj_step: { type: DataTypes.INTEGER, allowNull: true },
     source: { type: DataTypes.ENUM('bank', 'quiz'), allowNull: false, defaultValue: 'bank' },
     problem_id: { type: DataTypes.BIGINT, allowNull: true },
     started_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
