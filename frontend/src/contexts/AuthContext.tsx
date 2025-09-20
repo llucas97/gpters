@@ -5,6 +5,7 @@ interface User {
   email: string
   username: string
   survey_completed?: boolean
+  current_level?: number
 }
 
 interface AuthContextType {

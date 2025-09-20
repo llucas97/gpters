@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../server');
+const app = require('../app');
 
 describe('API 통합 테스트', () => {
   let surveyId;

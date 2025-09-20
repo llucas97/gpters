@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node app.js",
     "dev": "node app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:boj": "jest bojSteps.test.js bojApi.test.js",
+    "test:user-level": "jest userLevelProblemGeneration.test.js"
   },
   "keywords": [],
   "author": "",
@@ -30,5 +34,9 @@
     "passport-local": "^1.0.0",
     "sequelize": "^6.37.7",
     "vm2": "^3.9.19"
+  },
+  "devDependencies": {
+    "jest": "^30.1.3",
+    "supertest": "^7.1.4"
   }
 }

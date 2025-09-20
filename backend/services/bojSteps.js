@@ -14,7 +14,8 @@ const BUCKETS = [
 ];
 
 function clampStep(step) {
-  const s = Math.max(1, Math.min(TOTAL_STEPS, Number(step || 1)));
+  const num = Number(step);
+  const s = isNaN(num) ? 1 : Math.max(1, Math.min(TOTAL_STEPS, num));
   return s;
 }
 

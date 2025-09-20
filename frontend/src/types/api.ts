@@ -6,6 +6,14 @@ export interface ApiError {
   detail?: string;
 }
 
+// 사용자 타입
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  current_level?: number;
+}
+
 // 미세해서 정의
 
 export interface Example {

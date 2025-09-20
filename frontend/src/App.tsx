@@ -11,6 +11,9 @@ import ProblemsPage from "./pages/ProblemsPage";
 import QuizPage from "./pages/QuizPage";
 import DashboardPage from "./pages/DashboardPage";
 import SolvePage from "./pages/SolvePage";
+import BlockCodingPage from "./pages/BlockCodingPage";
+import ClozeTestPage from "./pages/ClozeTestPage";
+import CodeEditorPage from "./pages/CodeEditorPage";
 
 function App() {
   return (
@@ -28,6 +31,9 @@ function App() {
             <Route path="/level-test" element={<LevelTestPage />} />
             <Route path="/problems" element={<ProblemsPage />} />
             <Route path="/quiz" element={<QuizPage />} />
+            <Route path="/block-coding" element={<BlockCodingPage />} />
+            <Route path="/cloze-test" element={<ClozeTestPage />} />
+            <Route path="/code-editor" element={<CodeEditorPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/solve" element={<SolvePage />} />
           </Routes>

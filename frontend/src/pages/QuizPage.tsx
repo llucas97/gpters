@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { CLIENT_ID } from "../utils/clientId";
@@ -33,22 +33,40 @@ export default function QuizPage() {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
-  if (!isAuthenticated) {
-    navigate('/login');
-    return (
-      <div className="max-w-4xl mx-auto p-4 text-center">
-        <h1 className="text-2xl font-bold text-gray-600">로그인이 필요합니다</h1>
-        <p className="mt-2 text-gray-500">잠시 후 로그인 페이지로 이동합니다...</p>
-      </div>
-    );
-  }
+  // 🧪 테스트용: 하드코딩된 사용자 레벨 (나중에 user.current_level로 변경)
+  const [testUserLevel, setTestUserLevel] = useState(3); // 테스트용 레벨 상태
+  
+  // 🔄 실제 배포시 변경할 부분:
+  // 1. 아래 로그인 체크 주석 해제
+  // 2. testUserLevel 관련 코드 제거
+  // 3. userLevel을 user.current_level || 0 으로 변경
+
+  // 로그인 체크를 일시적으로 비활성화 (테스트용)
+  // if (!isAuthenticated) {
+  //   navigate('/login');
+  //   return (
+  //     <div className="max-w-4xl mx-auto p-4 text-center">
+  //       <h1 className="text-2xl font-bold text-gray-600">로그인이 필요합니다</h1>
+  //       <p className="mt-2 text-gray-500">잠시 후 로그인 페이지로 이동합니다...</p>
+  //     </div>
+  //   );
+  // }
+
+  // 사용자 레벨 결정 (테스트용 하드코딩 → 나중에 실제 사용자 레벨로 변경)
+  const userLevel = isAuthenticated ? (user?.current_level ?? testUserLevel) : testUserLevel;
+  
+  // 🚀 실제 배포시: const userLevel = user?.current_level || 0;
 
   // 생성 파라미터
-  const [level, setLevel] = useState<number | "">("");
+  const [level, setLevel] = useState<number | "">(userLevel); // 기본값을 사용자 레벨로 설정
   const [topic, setTopic] = useState<string>("");
   const [language, setLanguage] = useState<string>("python");
-  const [randomize, setRandomize] = useState<boolean>(true); // ✅ 기본 랜덤
+  const [randomize, setRandomize] = useState<boolean>(false); // 테스트용으로 false로 변경
+
+  // 사용자 레벨이 변경될 때마다 level state 업데이트
+  useEffect(() => {
+    setLevel(userLevel);
+  }, [userLevel]);
 
   // 데이터 & UI 상태
   const [problem, setProblem] = useState<GeneratedProblem | null>(null);
@@ -107,6 +125,22 @@ export default function QuizPage() {
             topic: topic || "graph",
             language: language || "python",
           };
+
+      // 레벨별 인터페이스 분기
+      if (params.level <= 1) {
+        // 레벨 0-1: 블록코딩
+        navigate(`/block-coding?level=${params.level}&topic=${params.topic}`);
+        return;
+      } else if (params.level >= 2 && params.level <= 3) {
+        // 레벨 2-3: 빈칸채우기 (클로즈 테스트)
+        navigate(`/cloze-test?level=${params.level}&topic=${params.topic}&language=${params.language}`);
+        return;
+      } else if (params.level >= 4) {
+        // 레벨 4+: 코드 에디터 (Monaco Editor)
+        navigate(`/code-editor?level=${params.level}&topic=${params.topic}&language=${params.language}`);
+        return;
+      }
+      // 기본값: 기존 퀴즈 (예외 처리)
 
       const response = await fetch("/api/problem-bank/generate", {
         method: "POST",
@@ -194,9 +228,49 @@ export default function QuizPage() {
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">알고리즘 빈칸 학습</h1>
+        <div>
+          <h1 className="text-2xl font-bold">알고리즘 빈칸 학습</h1>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-sm text-gray-500">
+              🧪 테스트 모드 | 현재 사용자 레벨: <span className="font-bold text-blue-600">Level {userLevel}</span>
+            </p>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-gray-400">빠른 변경:</span>
+              {[0, 1, 2, 3, 4, 5].map(testLevel => (
+                <button
+                  key={testLevel}
+                  onClick={() => setTestUserLevel(testLevel)}
+                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                    testLevel === userLevel 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  title={
+                    testLevel <= 1 ? '블록코딩 인터페이스' :
+                    testLevel <= 3 ? '빈칸채우기 인터페이스' :
+                    '코드에디터 인터페이스'
+                  }
+                >
+                  {testLevel}
+                </button>
+              ))}
+              <button
+                onClick={() => {
+                  // 현재 레벨로 퀴즈 생성하여 자동 라우팅 테스트
+                  setLevel(userLevel);
+                  setRandomize(false);
+                  // fetchGeneratedProblem이 호출되면서 자동으로 적절한 인터페이스로 이동
+                }}
+                className="ml-2 px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                title="현재 레벨에 맞는 인터페이스로 자동 이동"
+              >
+                🚀 테스트
+              </button>
+            </div>
+          </div>
+        </div>
         <div className="text-sm text-gray-600">
-          안녕하세요, <span className="font-semibold text-blue-600">{user?.username}</span>님!
+          안녕하세요, <span className="font-semibold text-blue-600">{user?.username || 'TestUser'}</span>님!
         </div>
       </div>
 
