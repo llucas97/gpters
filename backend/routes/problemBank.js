@@ -21,7 +21,16 @@ router.post('/generate', async (req, res) => {
     const topic    = String(req.body?.topic || 'graph');
     const language = String(req.body?.language || 'python');
 
-    const payload = await generateProblem({ level, topic, language });
+    // 최근 생성된 문제들의 제목을 가져와서 중복 방지에 활용
+    const recentProblems = await db.ProblemBank.findAll({
+      where: { level, topic, language },
+      order: [['id', 'DESC']],
+      limit: 10,
+      attributes: ['title']
+    });
+    const recentTitles = recentProblems.map(p => p.title);
+
+    const payload = await generateProblem({ level, topic, language, recentTitles });
 
     const created = await db.ProblemBank.create({
       source: 'openai',

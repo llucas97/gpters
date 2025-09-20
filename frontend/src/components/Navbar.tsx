@@ -56,9 +56,9 @@ const Navbar = () => {
             {isAuthenticated && (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/quiz">
+                  <Link className="nav-link" to="/solve">
                     <i className="bi bi-code-slash me-1"></i>
-                    알고리즘 퀴즈
+                    문제 해결
                   </Link>
                 </li>
                 <li className="nav-item">

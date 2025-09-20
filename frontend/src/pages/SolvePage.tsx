@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Editor, { OnMount, BeforeMount } from '@monaco-editor/react';
+import { useAuth } from '../contexts/AuthContext';
 
 // ===== client id =====
 const getClientId = (): string => {
@@ -55,6 +57,58 @@ const emphasizePlaceholders = (code: string) => {
   );
 };
 
+// --- 공통 유틸 (파일 상단에) ---
+
+function stripCommentedPlaceholdersRaw(code: string): string {
+  if (!code) return "";
+  let out = code;
+  
+  // Python style: # __N__
+  out = out.replace(
+    /(^|[\r\n])([ \t]*)#\s*__\s*(\d+)\s*__/g,
+    (_m, a, indent, d) => `${a}${indent}__${d}__`
+  );
+  
+  // C/C++/Java style: /* __N__ */
+  out = out.replace(/\/\*\s*__\s*(\d+)\s*__\s*\*\//g, (_m, d) => `__${d}__`);
+  
+  // JavaScript/C++ style: // __N__
+  out = out.replace(/(^|[\r\n])([ \t]*)\/\/\s*__\s*(\d+)\s*__/g, (_m, a, indent, d) => `${a}${indent}__${d}__`);
+  
+  return out;
+}
+
+type CodeSeg = { t: 'text', v: string } | { t: 'blank', id: number };
+function parseClozeSegments(code: string): CodeSeg[] {
+  const raw = stripCommentedPlaceholdersRaw(code);
+  const re = /__\s*(\d+)\s*__/g;
+  const segs: CodeSeg[] = [];
+  let last = 0, m: RegExpExecArray | null;
+  while ((m = re.exec(raw)) !== null) {
+    const id = Number(m[1]);
+    if (m.index > last) segs.push({ t: 'text', v: raw.slice(last, m.index) });
+    segs.push({ t: 'blank', id });
+    last = re.lastIndex;
+  }
+  if (last < raw.length) segs.push({ t: 'text', v: raw.slice(last) });
+  return segs;
+}
+
+// 에디터 초기코드: 빈칸(__1__)은 공백으로 치환
+function initialEditorCode(problem: any) {
+  const raw = stripCommentedPlaceholdersRaw(problem?.code || "");
+  return raw.replace(/__\s*\d+\s*__/g, "");
+}
+
+const styles = {
+  panel:     { background:'#fff', border:'2px solid #e5e7eb', borderRadius:18, padding:12 },
+  codePanel: { background:'#0d1117', color:'#e6edf3', border:'2px solid #111827', borderRadius:18, padding:12 },
+  sectionTitle: { fontWeight:600, marginBottom:8 },
+  blankChip: { border:'2px solid #facc15', background:'#374151', color:'#fff', borderRadius:8, padding:'2px 8px', display:'inline-flex', alignItems:'center', height:26, minWidth:80, margin:'0 2px' },
+  tokenPill: { border:'3px solid #6366f1', background:'#e0e7ff', color:'#1e1b4b', borderRadius:12, padding:'6px 12px', fontSize:12, userSelect:'none' },
+  submit:    { border:'3px solid rgb(5,150,105)', background:'rgb(209,250,229)', color:'rgb(6,95,70)', borderRadius:10, padding:'10px 14px', fontWeight:700 }
+};
+
 // ===== types =====
 type Blank = { id: number | string; hint?: string; answer?: string };
 type Example = { input: string; output: string; explanation?: string };
@@ -74,8 +128,9 @@ type Problem = {
 };
 
 export default function SolvePage() {
+  const { user } = useAuth(); // 사용자 정보 가져오기
   const [uiLevel, setUiLevel] = useState<number>(2); // 0-5
-  const [language, setLanguage] = useState<string>("javascript"); // editor용
+  const [language, setLanguage] = useState<string>("javascript"); // 기본 언어를 JavaScript로 변경
   const [problem, setProblem] = useState<Problem | null>(null);
   const [err, setErr] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -106,10 +161,14 @@ export default function SolvePage() {
       setErr("");
       const topics = ["graph", "dp", "greedy", "tree", "string", "math"];
       const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
+      
+      // 사용자 현재 레벨에 정확히 맞는 문제 생성
+      const userLevel = user?.current_level ?? 0;
+      
       const params = {
-        level: 25 + Math.floor(Math.random() * 6),
+        level: userLevel, // 사용자 현재 레벨 그대로 사용
         topic: pick(topics),
-        language: "python",
+        language: language, // 현재 선택된 언어 사용
       };
 
       const res = await fetch("/api/problem-bank/generate", {
@@ -233,22 +292,28 @@ export default function SolvePage() {
             onChange={(e) => setLanguage(e.target.value)}
             className="w-full border rounded px-2 py-1"
           >
-            <option value="javascript">javascript</option>
-            <option value="python" disabled>
-              python (미지원)
-            </option>
-            <option value="cpp" disabled>
-              cpp (미지원)
-            </option>
+            <option value="javascript">JavaScript</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="cpp">C++</option>
+            <option value="c">C</option>
           </select>
         </div>
-        <button
-          onClick={fetchProblem}
-          disabled={loading}
-          className="h-9 border rounded px-3 font-semibold hover:bg-gray-50"
-        >
-          {loading ? "불러오는 중..." : "문제 생성"}
-        </button>
+        <div>
+          <label className="block text-sm text-gray-600">문제 생성</label>
+          <button
+            onClick={fetchProblem}
+            disabled={loading}
+            className="w-full h-9 border rounded px-3 font-semibold hover:bg-gray-50 disabled:opacity-50"
+          >
+            {loading ? "생성 중..." : "문제 생성"}
+          </button>
+          {user && (
+            <div className="text-xs text-gray-500 mt-1">
+              현재 레벨: {user.current_level ?? 0} (레벨 {user.current_level ?? 0} 문제 생성)
+            </div>
+          )}
+        </div>
       </div>
 
       {err && (
@@ -269,7 +334,7 @@ export default function SolvePage() {
               )}
             </div>
             {(problem.input_spec || problem.output_spec) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-4">
                 <div className="border rounded p-2">
                   <div className="text-sm font-semibold mb-1">입력 형식</div>
                   <div className="text-sm whitespace-pre-wrap">
@@ -291,137 +356,367 @@ export default function SolvePage() {
       {/* 모드별 UI */}
       {problem && (
         <div className="mt-6 space-y-6">
-          {/* ===== 0-1: 블록(토큰 드래그-드롭) ===== */}
-          {uiLevel <= 1 && (
-            <section>
-              <h2 className="text-xl font-bold mb-2">블록 코딩(초급)</h2>
-              <p className="text-sm text-gray-600 mb-2">
-                정답 토큰을 올바른 순서로 정렬하세요.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* 코드 미리보기 */}
-                <div>
-                  <div className="text-sm font-semibold mb-1">코드</div>
-                  {(() => {
-                    const html = emphasizePlaceholders(problem.code || "");
-                    return (
-                      <pre className="rounded-lg p-3 overflow-auto text-[13px] leading-6 bg-black text-white">
-                        <code
-                          className="font-mono whitespace-pre"
-                          dangerouslySetInnerHTML={{ __html: html }}
-                        />
-                      </pre>
-                    );
-                  })()}
-                  <div className="mt-2 text-sm text-gray-600">힌트:</div>
-                  <ol className="list-decimal ml-5 text-sm">
-                    {orderedBlanks.map((b: any) => (
-                      <li key={String(b.id)}>{b.hint || "(힌트 없음)"}</li>
-                    ))}
-                  </ol>
-                </div>
-
-                {/* 드래그 영역 */}
-                <BlockDnD tokens={blockTokens} setTokens={setBlockTokens} />
-              </div>
-
-              <div className="mt-3">
-                <button
-                  onClick={submitBlock}
-                  className="border rounded px-3 py-1 font-semibold hover:bg-gray-50"
-                >
-                  제출
-                </button>
-              </div>
-            </section>
+          {/* 0–1: 블록코딩(4스택) */}
+          {problem && (uiLevel <= 1) && (
+            <BlockCodingPanel problem={problem} orderedBlanks={orderedBlanks} CLIENT_ID={CLIENT_ID} />
           )}
 
-          {/* ===== 2-3: 빈칸 채우기 ===== */}
-          {uiLevel >= 2 && uiLevel <= 3 && (
-            <section>
-              <h2 className="text-xl font-bold mb-2">빈칸 채우기</h2>
-              {(() => {
-                const html = emphasizePlaceholders(problem.code || "");
-                return (
-                  <pre className="rounded-lg p-3 overflow-auto text-[13px] leading-6 bg-black text-white">
-                    <code
-                      className="font-mono whitespace-pre"
-                      dangerouslySetInnerHTML={{ __html: html }}
-                    />
-                  </pre>
-                );
-              })()}
-              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                {orderedBlanks.map((b: any, i: number) => (
-                  <div key={String(b.id)} className="flex items-center gap-2">
-                    <label className="text-sm w-20">빈칸 {b.id}</label>
-                    <input
-                      className="flex-1 border rounded px-2 py-1 text-sm"
-                      value={fills[i] ?? ""}
-                      onChange={(e) =>
-                        setFills((p) => {
-                          const n = p.slice();
-                          n[i] = e.target.value;
-                          return n;
-                        })
-                      }
-                      placeholder="정답 입력"
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3">
-                <button
-                  onClick={submitCloze}
-                  className="border rounded px-3 py-1 font-semibold hover:bg-gray-50"
-                >
-                  제출
-                </button>
-              </div>
-            </section>
+          {/* 2–3: 빈칸채우기(3스택, 힌트 없음) */}
+          {problem && (uiLevel >= 2 && uiLevel <= 3) && (
+            <ClozePanel problem={problem} orderedBlanks={orderedBlanks} CLIENT_ID={CLIENT_ID} />
           )}
 
-          {/* ===== 4-5: 코드 에디터(JS) ===== */}
-          {uiLevel >= 4 && (
-            <section>
-              <h2 className="text-xl font-bold mb-2">코드 에디터</h2>
-              <p className="text-sm text-gray-600 mb-2">
-                현재는 JavaScript만 채점합니다.{" "}
-                <code>function solve(...) {/* ... */}</code> 를 구현하세요.
-              </p>
-              <textarea
-                value={editorCode}
-                onChange={(e) => setEditorCode(e.target.value)}
-                className="w-full h-64 border rounded p-2 font-mono text-sm"
-              />
-              <div className="mt-3">
-                <button
-                  onClick={submitEditor}
-                  className="border rounded px-3 py-1 font-semibold hover:bg-gray-50"
-                >
-                  제출
-                </button>
-              </div>
-              {/* 예시 표시 */}
-              {Array.isArray(problem.examples) &&
-                problem.examples.length > 0 && (
-                  <div className="mt-3 text-sm">
-                    <div className="font-semibold">테스트 예시</div>
-                    <ul className="list-disc ml-5">
-                      {problem.examples.map((ex, idx) => (
-                        <li key={idx}>
-                          <b>input:</b> {ex.input} <b>→ expected:</b>{" "}
-                          {ex.output}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-            </section>
+          {/* 4–5: 코드 에디터(3스택: 문제 → 에디터 → 제출) */}
+          {problem && (uiLevel >= 4) && (
+            <CodeEditorPanel problem={problem} CLIENT_ID={CLIENT_ID} />
           )}
         </div>
       )}
     </div>
+  );
+}
+
+// --- 공통 소형 컴포넌트 ---
+
+function DragToken({ token }: { token: string }) {
+  const onDragStart = (e: React.DragEvent) => e.dataTransfer.setData('text/plain', token);
+  return (
+    <div draggable onDragStart={onDragStart} style={styles.tokenPill} className="cursor-move select-none">
+      {token}
+    </div>
+  );
+}
+
+function DropSlot({
+  id, value, onDropToken, onClear
+}: {
+  id:number; value?:string|null;
+  onDropToken:(id:number, token:string)=>void; onClear:(id:number)=>void;
+}) {
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const t = e.dataTransfer.getData('text/plain');
+    if (t) onDropToken(id, t);
+  };
+  return (
+    <span onDrop={handleDrop} onDragOver={(e)=>e.preventDefault()} style={styles.blankChip} title={`빈칸 ${id}`}>
+      {value ? (<>{value}<button onClick={()=>onClear(id)} className="ml-1 text-[10px]">×</button></>) : 'BLANK'}
+    </span>
+  );
+}
+
+function InputSlot({
+  id, value, onChange, onClear
+}: {
+  id:number; value?:string|null;
+  onChange:(id:number,v:string)=>void; onClear:(id:number)=>void;
+}) {
+  return (
+    <span style={styles.blankChip}>
+      <input
+        value={value ?? ''}
+        onChange={(e)=>onChange(id, e.target.value)}
+        className="font-mono text-[12px]"
+        style={{ background:'transparent', color:'#fff', width:90, outline:'none', border:'none' }}
+        placeholder="입력..."
+      />
+      {value ? <button onClick={()=>onClear(id)} className="ml-1 text-[10px]">×</button> : null}
+    </span>
+  );
+}
+
+// --- 블록코딩(4스택) ---
+function BlockCodingPanel({
+  problem, orderedBlanks, CLIENT_ID
+}: { problem:any; orderedBlanks:any[]; CLIENT_ID:string; }) {
+  const segs = useMemo(()=>parseClozeSegments(problem.code||''), [problem?.code]);
+  const blankIds = useMemo(()=>orderedBlanks.map(b=>Number(String(b.id).replace(/\D/g,''))).filter(n=>n>0), [orderedBlanks]);
+  const [filled, setFilled] = useState<Record<number,string|null>>({});
+  const tokens = useMemo(()=>{
+    const arr = orderedBlanks.map((b:any)=>(b.answer??'').trim()).filter(Boolean);
+    const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a;
+  }, [orderedBlanks]);
+
+  useEffect(()=>{ const init:Record<number,string|null>={}; blankIds.forEach(id=>init[id]=null); setFilled(init); }, [blankIds.join(',')]);
+
+  const onDropToken = (id:number, t:string)=> setFilled(p=>({...p,[id]:t}));
+  const onClear = (id:number)=> setFilled(p=>({...p,[id]:null}));
+
+  const submit = async () => {
+    const blanks_user = orderedBlanks.map((b:any)=>({ id:Number(String(b.id).replace(/\D/g,'')), value: filled[Number(String(b.id).replace(/\D/g,''))] ?? '' }));
+    if (blanks_user.some(x=>!x.value) && !confirm('빈칸이 비어 있습니다. 제출할까요?')) return;
+    const body = { mode:'cloze', client_id:CLIENT_ID, problem_id:problem.id, blanks_user, started_at:new Date().toISOString(), finished_at:new Date().toISOString() };
+    const r = await fetch('/api/solve/grade',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    alert(JSON.stringify(await r.json(), null, 2));
+  };
+
+  return (
+    <section className="flex flex-col gap-4">
+      {/* 1) 코드(드롭 슬롯) */}
+      <div style={styles.codePanel}>
+        <div style={{...styles.sectionTitle, color:'#e5e7eb'}}>1) Code with word blanks</div>
+        <pre className="rounded p-3 overflow-auto text-[13px] leading-6" style={{ background:'transparent' }}>
+          <code className="font-mono whitespace-pre-wrap break-words">
+            {segs.map((s,i)=> s.t==='text'
+              ? <span key={i}>{s.v}</span>
+              : <DropSlot key={`slot-${s.id}-${i}`} id={s.id} value={filled[s.id]} onDropToken={onDropToken} onClear={onClear} />
+            )}
+          </code>
+        </pre>
+      </div>
+      {/* 2) 단어 블록 */}
+      <div style={styles.panel}>
+        <div style={styles.sectionTitle}>2) Draggable Word Blocks</div>
+        <div className="flex flex-wrap gap-2">
+          {tokens.length ? tokens.map((t:string,idx:number)=>(<DragToken key={`${t}-${idx}`} token={t}/>)) : <span className="text-sm text-gray-500">블록 없음</span>}
+        </div>
+      </div>
+      {/* 3) 제출 */}
+      <div><button onClick={submit} style={styles.submit}>3) Submit</button></div>
+    </section>
+  );
+}
+
+// --- 코드 에디터 패널(Monaco Editor 사용) ---
+function CodeEditorPanel({ problem, CLIENT_ID }: { problem:any; CLIENT_ID:string }) {
+  const [code, setCode] = useState<string>("");
+
+  useEffect(() => {
+    const raw = stripCommentedPlaceholdersRaw(problem?.code || "");
+    setCode(raw.replace(/__\s*\d+\s*__/g, "") || "# write your solution here\n");
+  }, [problem?.id]);
+
+  const lang = (problem?.language || 'python').toLowerCase();
+
+  const beforeMount: BeforeMount = (monaco) => {
+    // Visual Studio Dark+ 프로페셔널 테마
+    monaco.editor.defineTheme('vs-dark-plus-enhanced', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        // 주석 - 이탤릭체로 구분감 높이기
+        { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
+        { token: 'comment.line', foreground: '6A9955', fontStyle: 'italic' },
+        { token: 'comment.block', foreground: '6A9955', fontStyle: 'italic' },
+        
+        // 문자열 - 따뜻한 주황색
+        { token: 'string', foreground: 'CE9178' },
+        { token: 'string.quoted', foreground: 'CE9178' },
+        { token: 'string.template', foreground: 'CE9178' },
+        
+        // 숫자 - 연한 녹색
+        { token: 'number', foreground: 'B5CEA8' },
+        { token: 'number.hex', foreground: 'B5CEA8' },
+        { token: 'number.float', foreground: 'B5CEA8' },
+        
+        // 키워드 - 보라색 + 볼드
+        { token: 'keyword', foreground: 'C586C0', fontStyle: 'bold' },
+        { token: 'keyword.control', foreground: 'C586C0', fontStyle: 'bold' },
+        { token: 'keyword.operator', foreground: 'D4D4D4' },
+        
+        // 타입과 클래스 - 민트색 + 볼드
+        { token: 'type', foreground: '4EC9B0', fontStyle: 'bold' },
+        { token: 'support.type', foreground: '4EC9B0' },
+        { token: 'support.class', foreground: '4EC9B0' },
+        
+        // 함수 - 노란색 + 볼드
+        { token: 'function', foreground: 'DCDCAA', fontStyle: 'bold' },
+        { token: 'support.function', foreground: 'DCDCAA' },
+        { token: 'entity.name.function', foreground: 'DCDCAA' },
+        
+        // 변수 - 연한 파란색
+        { token: 'variable', foreground: '9CDCFE' },
+        { token: 'variable.parameter', foreground: '9CDCFE' },
+        
+        // 상수 - 밝은 파란색
+        { token: 'constant', foreground: '4FC1FF' },
+        { token: 'constant.language', foreground: '569CD6' },
+        
+        // 연산자와 구두점
+        { token: 'operator', foreground: 'D4D4D4' },
+        { token: 'delimiter', foreground: 'D4D4D4' },
+        { token: 'delimiter.bracket', foreground: 'FFD700' },
+        { token: 'delimiter.parenthesis', foreground: 'FFD700' },
+        
+        // JavaScript 특화
+        { token: 'support.constant.math', foreground: '4FC1FF' },
+        { token: 'meta.object-literal.key', foreground: '9CDCFE' },
+        
+        // Python 특화
+        { token: 'support.function.builtin.python', foreground: 'DCDCAA' },
+        { token: 'constant.language.python', foreground: '569CD6' },
+      ],
+      colors: {
+        'editor.background': '#1e1e1e',
+        'editor.foreground': '#d4d4d4',
+        'editorLineNumber.foreground': '#858585',
+        'editorLineNumber.activeForeground': '#c6c6c6',
+        'editor.selectionBackground': '#264f78',
+        'editor.inactiveSelectionBackground': '#3a3d41',
+        'editorIndentGuide.background': '#404040',
+        'editorIndentGuide.activeBackground': '#707070',
+        'editor.wordHighlightBackground': '#575757b8',
+        'editorBracketMatch.background': '#0064001a',
+        'editorBracketMatch.border': '#888888',
+        'editorGutter.background': '#1e1e1e',
+        'editorWhitespace.foreground': '#404040'
+      }
+    });
+  };
+
+  const onMount: OnMount = (editor, monaco) => {
+    editor.updateOptions({
+      fontSize: 16,                    // 더 큰 폰트로 가독성 향상
+      fontFamily: "'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
+      fontWeight: '400',
+      lineHeight: 22,                  // 줄 간격 조정
+      lineNumbers: 'on',
+      lineNumbersMinChars: 3,
+      glyphMargin: true,
+      folding: true,                   // 코드 접기 기능
+      foldingStrategy: 'indentation',
+      showFoldingControls: 'always',
+      minimap: { enabled: false },     // 미니맵 비활성화로 공간 확보
+      wordWrap: 'on',
+      wordWrapColumn: 120,
+      tabSize: 4,
+      insertSpaces: true,              // 탭을 스페이스로 변환
+      detectIndentation: true,         // 자동 들여쓰기 감지
+      trimAutoWhitespace: true,        // 자동 공백 제거
+      renderWhitespace: 'boundary',    // 공백 문자 표시
+      renderIndentGuides: true,        // 들여쓰기 가이드 표시
+      highlightActiveIndentGuide: true,
+      smoothScrolling: true,
+      cursorBlinking: 'smooth',        // 부드러운 커서 깜빡임
+      cursorSmoothCaretAnimation: 'on',
+      cursorWidth: 2,
+      multiCursorModifier: 'ctrlCmd',  // 다중 커서 지원
+      formatOnPaste: true,             // 붙여넣기 시 자동 포맷
+      formatOnType: true,              // 타이핑 시 자동 포맷
+      autoIndent: 'full',              // 완전 자동 들여쓰기
+      bracketPairColorization: { enabled: true }, // 괄호 색상화
+      guides: {
+        bracketPairs: true,            // 괄호 쌍 가이드
+        indentation: true,             // 들여쓰기 가이드
+        highlightActiveIndentation: true
+      },
+      suggest: {
+        enabled: true,                 // 자동완성 활성화
+        snippetsPreventQuickSuggestions: false,
+        localityBonus: true
+      },
+      acceptSuggestionOnCommitCharacter: true,
+      acceptSuggestionOnEnter: 'on',
+      tabCompletion: 'on',
+      wordBasedSuggestions: 'currentDocument',
+      parameterHints: { enabled: true },
+      quickSuggestions: { other: true, comments: false, strings: false },
+      scrollbar: { 
+        verticalScrollbarSize: 14,
+        horizontalScrollbarSize: 14,
+        useShadows: true
+      },
+      overviewRulerBorder: false,
+      hideCursorInOverviewRuler: true,
+      scrollBeyondLastLine: false,
+      scrollBeyondLastColumn: 5,
+      stickyScroll: { enabled: true }, // 현재 함수/클래스 표시
+      padding: { top: 10, bottom: 10 } // 상하 여백
+    });
+  };
+
+  const submit = async () => {
+    const body = {
+      mode: 'editor',
+      client_id: CLIENT_ID,
+      problem_id: problem.id,
+      language: lang,
+      code_user: code,
+      started_at: new Date().toISOString(),
+      finished_at: new Date().toISOString()
+    };
+    const r = await fetch('/api/solve/grade', {
+      method: 'POST', headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(body)
+    });
+    const j = await r.json();
+    alert(JSON.stringify(j, null, 2));
+  };
+
+  return (
+    <section className="flex flex-col gap-4">
+      {/* 1) 문제 전문 */}
+      <div style={styles.panel}>
+        <div style={styles.sectionTitle}>1) 문제 전문</div>
+        <div className="text-sm whitespace-pre-wrap">
+          {problem.statement || <span className="text-gray-500">문제 설명 없음</span>}
+        </div>
+      </div>
+
+      {/* 2) Monaco 에디터 */}
+      <div style={styles.codePanel}>
+        <div style={{...styles.sectionTitle, color:'#e5e7eb'}}>2) 알고리즘을 작성할 수 있는 에디터</div>
+        <Editor
+          height="420px"
+          language={lang}       // 'python' | 'javascript' | ...
+          theme="vs-dark-plus-enhanced"  // Visual Studio Dark+ 프로페셔널 테마
+          value={code}
+          beforeMount={beforeMount}
+          onMount={onMount}
+          onChange={(v)=>setCode(v ?? '')}
+          options={{
+            automaticLayout: true, // 컨테이너 리사이즈 반영
+          }}
+        />
+      </div>
+
+      {/* 3) 제출하기 */}
+      <div><button onClick={submit} style={styles.submit}>3) 제출하기</button></div>
+    </section>
+  );
+}
+
+// --- 빈칸채우기(3스택, 힌트 없음) ---
+function ClozePanel({
+  problem, orderedBlanks, CLIENT_ID
+}: { problem:any; orderedBlanks:any[]; CLIENT_ID:string; }) {
+  const segs = useMemo(()=>parseClozeSegments(problem.code||''), [problem?.code]);
+  const blankIds = useMemo(()=>orderedBlanks.map(b=>Number(String(b.id).replace(/\D/g,''))).filter(n=>n>0), [orderedBlanks]);
+  const [filled, setFilled] = useState<Record<number,string|null>>({});
+  useEffect(()=>{ const init:Record<number,string|null>={}; blankIds.forEach(id=>init[id]=null); setFilled(init); }, [blankIds.join(',')]);
+  const onChange=(id:number,v:string)=>setFilled(p=>({...p,[id]:v}));
+  const onClear =(id:number)=>setFilled(p=>({...p,[id]:null}));
+
+  const submit = async () => {
+    const blanks_user = orderedBlanks.map((b:any)=>({ id:Number(String(b.id).replace(/\D/g,'')), value: filled[Number(String(b.id).replace(/\D/g,''))] ?? '' }));
+    if (blanks_user.some(x=>!x.value) && !confirm('빈칸이 비어 있습니다. 제출할까요?')) return;
+    const body = { mode:'cloze', client_id:CLIENT_ID, problem_id:problem.id, blanks_user, started_at:new Date().toISOString(), finished_at:new Date().toISOString() };
+    const r = await fetch('/api/solve/grade',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    alert(JSON.stringify(await r.json(), null, 2));
+  };
+
+  return (
+    <section className="flex flex-col gap-4">
+      {/* 1) 문제 */}
+      <div style={styles.panel}>
+        <div style={styles.sectionTitle}>1) 문제 전문</div>
+        <div className="text-sm whitespace-pre-wrap">{problem.statement || <span className="text-gray-500">문제 설명 없음</span>}</div>
+      </div>
+      {/* 2) 코드(인라인 입력) */}
+      <div style={styles.codePanel}>
+        <div style={{...styles.sectionTitle, color:'#e5e7eb'}}>2) 빈칸을 적을 수 있는 정답 알고리즘</div>
+        <pre className="rounded p-3 overflow-auto text-[13px] leading-6" style={{ background:'transparent' }}>
+          <code className="font-mono whitespace-pre-wrap break-words">
+            {segs.map((s,i)=> s.t==='text'
+              ? <span key={i}>{s.v}</span>
+              : <InputSlot key={`input-${s.id}-${i}`} id={s.id} value={filled[s.id]} onChange={onChange} onClear={onClear} />
+            )}
+          </code>
+        </pre>
+      </div>
+      {/* 3) 제출 */}
+      <div><button onClick={submit} style={styles.submit}>3) 제출하기</button></div>
+    </section>
   );
 }
 

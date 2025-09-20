@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
@@ -8,12 +8,8 @@ import ProfilePage from "./pages/ProfilePage";
 import SurveyPage from "./pages/SurveyPage";
 import LevelTestPage from "./pages/LevelTestPage";
 import ProblemsPage from "./pages/ProblemsPage";
-import QuizPage from "./pages/QuizPage";
 import DashboardPage from "./pages/DashboardPage";
 import SolvePage from "./pages/SolvePage";
-import BlockCodingPage from "./pages/BlockCodingPage";
-import ClozeTestPage from "./pages/ClozeTestPage";
-import CodeEditorPage from "./pages/CodeEditorPage";
 
 function App() {
   return (
@@ -30,10 +26,7 @@ function App() {
             <Route path="/survey" element={<SurveyPage />} />
             <Route path="/level-test" element={<LevelTestPage />} />
             <Route path="/problems" element={<ProblemsPage />} />
-            <Route path="/quiz" element={<QuizPage />} />
-            <Route path="/block-coding" element={<BlockCodingPage />} />
-            <Route path="/cloze-test" element={<ClozeTestPage />} />
-            <Route path="/code-editor" element={<CodeEditorPage />} />
+            <Route path="/quiz" element={<Navigate to="/solve" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/solve" element={<SolvePage />} />
           </Routes>

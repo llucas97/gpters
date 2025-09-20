@@ -12,3 +12,5 @@ UPDATE study_sessions
 SET handle = 'anonymous' 
 WHERE handle IS NULL OR handle = '';
 
+
+
