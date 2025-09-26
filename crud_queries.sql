@@ -535,3 +535,110 @@ FROM problems p
 WHERE p.level = 2 AND p.is_active = TRUE
 ORDER BY p.rating DESC, p.rating_count DESC
 LIMIT 5; 
+
+CREATE TABLE leveltest_problems (
+    lt_problem_id INT AUTO_INCREMENT PRIMARY KEY,
+    leveltest_id INT NOT NULL,
+    
+    -- 문제 정의
+    title VARCHAR(200) NOT NULL,
+    description TEXT NOT NULL,
+    level INT NOT NULL CHECK (level >= 0 AND level <= 5),
+    difficulty ENUM('beginner', 'intermediate', 'advanced') NOT NULL,
+    
+    -- 객관식 선택지
+    option1 VARCHAR(255) NOT NULL,
+    option2 VARCHAR(255) NOT NULL,
+    option3 VARCHAR(255) NOT NULL,
+    option4 VARCHAR(255) NOT NULL,
+    option5 VARCHAR(255) NOT NULL,
+    
+    -- 정답
+    correct_option TINYINT NOT NULL CHECK (correct_option BETWEEN 1 AND 5),
+    
+    -- 사용자 제출
+    submitted_option TINYINT CHECK (submitted_option BETWEEN 1 AND 5),
+    is_correct BOOLEAN DEFAULT FALSE,
+    score INT DEFAULT 0 CHECK (score >= 0 AND score <= 30),  -- 가중치 점수 반영
+    submitted_at TIMESTAMP NULL,
+    
+    -- 외래 키: 어느 레벨테스트에 속하는 문제인지
+    FOREIGN KEY (leveltest_id) REFERENCES leveltest(leveltest_id) ON DELETE CASCADE
+);
+
+-- 조회 최적화 인덱스
+CREATE INDEX idx_lt_problems_leveltest ON leveltest_problems(leveltest_id);
+CREATE INDEX idx_lt_problems_difficulty ON leveltest_problems(difficulty);
+
+UPDATE leveltest_problems
+SET submitted_option = 2,
+    is_correct = (2 = correct_option),
+    score = CASE
+        WHEN (2 = correct_option AND difficulty = 'beginner') THEN 10
+        WHEN (2 = correct_option AND difficulty = 'intermediate') THEN 20
+        WHEN (2 = correct_option AND difficulty = 'advanced') THEN 30
+        ELSE 0
+    END,
+    submitted_at = CURRENT_TIMESTAMP
+WHERE lt_problem_id = 1;
+
+CREATE TABLE leveltest (
+    leveltest_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    total_score INT DEFAULT 0,
+    determined_level INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user (user_id) -- 한 번만 응시 가능
+);
+
+CREATE TABLE leveltest_problems (
+    problem_id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    description TEXT NOT NULL,
+    level INT NOT NULL, -- 0~5
+    difficulty ENUM('beginner','intermediate','advanced') NOT NULL,
+    option1 VARCHAR(255),
+    option2 VARCHAR(255),
+    option3 VARCHAR(255),
+    option4 VARCHAR(255),
+    option5 VARCHAR(255),
+    correct_option INT
+);
+
+
+INSERT INTO leveltest_problems
+(title, description, level, difficulty,
+ option1, option2, option3, option4, option5, correct_option)
+VALUES
+-- Level 0
+('Hello World 출력', 'Python에서 Hello World를 출력하는 함수는?', 0, 'beginner',
+ 'echo()', 'print()', 'printf()', 'say()', 'cout', 2),
+('주석 처리', 'Python에서 한 줄 주석은 어떤 기호로 시작합니까?', 0, 'beginner',
+ '//', '#', '--', '/*', ';', 2),
+
+-- Level 1
+('변수 선언', 'x에 10을 저장하는 올바른 문법은?', 1, 'beginner',
+ 'int x = 10', 'x = 10', 'let x = 10', 'var x = 10', 'x := 10', 2),
+('자료형', '다음 중 Python에서 문자열 타입은?', 1, 'beginner',
+ 'str', 'char', 'text', 'string', 'varchar', 1),
+
+-- Level 2
+('조건문', 'if문 올바른 구문은?', 2, 'intermediate',
+ 'if (x > 10)', 'if x > 10:', 'if x > 10 then:', 'when x > 10:', 'if x > 10 {}', 2),
+('논리 연산자', 'x가 5 이상이고 10 이하일 때 조건식은?', 2, 'intermediate',
+ 'if x >= 5 and x <= 10:', 'if 5 <= x <= 10:', 'if x in 5..10:', 'if x between 5 and 10:', 'if (x>=5 && x<=10):', 2),
+
+-- Level 3
+('for문', '0부터 9까지 출력하는 반복문은?', 3, 'intermediate',
+ 'for i in 0..9', 'for (i=0; i<10; i++)', 'for i in range(10):', 'foreach i in range(10):', 'loop i 0 to 9', 3),
+('리스트 길이', '리스트 a의 길이를 구하는 함수는?', 3, 'intermediate',
+ 'size(a)', 'count(a)', 'len(a)', 'length(a)', 'sizeof(a)', 3),
+
+-- Level 4
+('함수 정의', 'a와 b의 합을 반환하는 함수 정의는?', 4, 'advanced',
+ 'func add(a,b): return a+b', 'def add(a,b): return a+b', 'function add(a,b){return a+b}', 'lambda add(a,b): a+b', 'add = fn(a,b) => a+b', 2),
+
+-- Level 5
+('리스트 컴프리헨션', '0~9 제곱 리스트 생성 코드?', 5, 'advanced',
+ '[i^2 for i in range(10)]', '[i*i for i in range(10)]', '[pow(i) for i in 0..9]', '{i*i | i in range(10)}', 'map(lambda i: i*i, range(10))', 2);
