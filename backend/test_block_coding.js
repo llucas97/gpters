@@ -41,7 +41,14 @@ async function testBlockCodingGeneration() {
       
       // 검증
       console.log('\n✅ 검증 결과:');
-      console.log(`- 레벨 ${testCase.level}에 맞는 블랭크 개수: ${result.blankCount === (testCase.level === 0 ? 1 : 2) ? '✅' : '❌'}`);
+      const expectedBlankCount = testCase.level === 0 ? 1 : (testCase.level === 1 ? 2 : result.blankCount);
+      const blankCountCorrect = result.blankCount === expectedBlankCount;
+      console.log(`- 레벨 ${testCase.level}에 맞는 블랭크 개수: ${blankCountCorrect ? '✅' : '❌'} (예상: ${expectedBlankCount}, 실제: ${result.blankCount})`);
+      
+      // 선택된 키워드 개수와 블랭크 개수 일치 확인
+      const keywordCountMatch = result.keywordsToBlank.length === result.blankCount;
+      console.log(`- 키워드 개수와 블랭크 개수 일치: ${keywordCountMatch ? '✅' : '❌'} (키워드: ${result.keywordsToBlank.length}, 블랭크: ${result.blankCount})`);
+      
       console.log(`- 정답 블록 개수: ${result.blocks.filter(b => b.type === 'answer').length}개`);
       console.log(`- 오답 블록 개수: ${result.blocks.filter(b => b.type === 'distractor').length}개`);
       console.log(`- 총 블록 개수: ${result.blocks.length}개`);
@@ -49,6 +56,15 @@ async function testBlockCodingGeneration() {
       // 블랭크 코드에 BLANK_1, BLANK_2가 포함되어 있는지 확인
       const hasBlanks = result.blankedCode.includes('BLANK_1') || result.blankedCode.includes('BLANK_2');
       console.log(`- 블랭크 코드에 BLANK_* 포함: ${hasBlanks ? '✅' : '❌'}`);
+      
+      // 레벨별 엄격한 검증
+      if (testCase.level === 0) {
+        const hasExactlyOneBlank = (result.blankedCode.match(/BLANK_\d+/g) || []).length === 1;
+        console.log(`- 레벨 0: 정확히 1개 블랭크: ${hasExactlyOneBlank ? '✅' : '❌'}`);
+      } else if (testCase.level === 1) {
+        const hasExactlyTwoBlanks = (result.blankedCode.match(/BLANK_\d+/g) || []).length === 2;
+        console.log(`- 레벨 1: 정확히 2개 블랭크: ${hasExactlyTwoBlanks ? '✅' : '❌'}`);
+      }
       
     } catch (error) {
       console.error(`❌ 테스트 실패:`, error.message);

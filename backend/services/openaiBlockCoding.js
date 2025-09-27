@@ -74,7 +74,19 @@ function extractKeywordCandidates(code, language) {
     }
   }
   
-  return [...new Set(foundKeywords)]; // 중복 제거
+  const uniqueKeywords = [...new Set(foundKeywords)]; // 중복 제거
+  
+  // 키워드가 부족하면 기본 키워드 추가
+  if (uniqueKeywords.length < 2) {
+    const defaultKeywords = candidates.slice(0, 5); // 기본 키워드 5개
+    for (const defaultKeyword of defaultKeywords) {
+      if (!uniqueKeywords.includes(defaultKeyword)) {
+        uniqueKeywords.push(defaultKeyword);
+      }
+    }
+  }
+  
+  return uniqueKeywords;
 }
 
 /**
@@ -90,7 +102,18 @@ function getBlankCount(level) {
  * 랜덤하게 N개의 키워드를 선택
  */
 function selectRandomKeywords(keywords, count) {
-  if (keywords.length <= count) return keywords;
+  if (keywords.length <= count) {
+    // 키워드가 부족하면 기본 키워드로 보충
+    const language = 'javascript'; // 기본값
+    const candidates = KEYWORD_CANDIDATES[language];
+    const additionalKeywords = candidates.filter(word => !keywords.includes(word));
+    
+    while (keywords.length < count && additionalKeywords.length > 0) {
+      keywords.push(additionalKeywords.shift());
+    }
+    
+    return keywords;
+  }
   
   const shuffled = [...keywords].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
@@ -288,9 +311,34 @@ async function generateBlockCodingProblem({ level = 0, topic = 'basic', language
     }
 
     // 3. 레벨별 블랭크 개수에 맞게 키워드 선택
-    const blankCount = getBlankCount(level);
+    let blankCount = getBlankCount(level);
+    
+    // 레벨 0, 1에 대한 엄격한 검증
+    if (level === 0 && blankCount !== 1) {
+      console.warn(`Level 0 must have exactly 1 blank, but got ${blankCount}. Forcing to 1.`);
+      blankCount = 1;
+    } else if (level === 1 && blankCount !== 2) {
+      console.warn(`Level 1 must have exactly 2 blanks, but got ${blankCount}. Forcing to 2.`);
+      blankCount = 2;
+    }
+    
     const keywordsToBlank = selectRandomKeywords(keywordCandidates, blankCount);
     console.log(`Selected ${blankCount} keywords to blank:`, keywordsToBlank);
+    
+    // 최종 검증: 선택된 키워드 개수가 요구된 블랭크 개수와 일치하는지 확인
+    if (keywordsToBlank.length !== blankCount) {
+      console.warn(`Keyword count mismatch: expected ${blankCount}, got ${keywordsToBlank.length}`);
+      // 부족한 키워드를 기본 키워드로 보충
+      const candidates = KEYWORD_CANDIDATES[language] || KEYWORD_CANDIDATES.javascript;
+      while (keywordsToBlank.length < blankCount) {
+        const additionalKeyword = candidates.find(word => !keywordsToBlank.includes(word));
+        if (additionalKeyword) {
+          keywordsToBlank.push(additionalKeyword);
+        } else {
+          break;
+        }
+      }
+    }
 
     // 4. 블랭크가 포함된 코드 생성
     const blankedCode = createBlankedCode(completeCode, keywordsToBlank);
