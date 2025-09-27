@@ -14,6 +14,9 @@ const {
   normalizeJsPlaceholders 
 } = require('./openaiCloze');
 
+// 블록코딩 전용 함수들 import
+const { generateBlockCodingProblem } = require('./openaiBlockCoding');
+
 function placeholderSyntax(language) {
   const lang = String(language || '').toLowerCase();
   
@@ -133,8 +136,14 @@ function userPayload({ level, topic, language }) {
   });
 }
 
-async function generateProblem({ level = 10, topic = 'graph', language = 'python', recentTitles = [] }) {
+async function generateProblem({ level = 10, topic = 'graph', language = 'python', recentTitles = [], problemType = 'cloze' }) {
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing');
+
+  // 레벨 0~1은 블록코딩 문제로 생성
+  if (level <= 1 && problemType !== 'cloze') {
+    console.log(`Level ${level} detected - using block coding generation`);
+    return await generateBlockCodingProblem({ level, topic, language });
+  }
 
   const system = buildSystemPrompt(language);
   

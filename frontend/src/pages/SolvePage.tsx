@@ -178,13 +178,18 @@ export default function SolvePage() {
         language: language, // 현재 선택된 언어 사용
       };
 
-      const res = await fetch("/api/problem-bank/generate", {
+      // 레벨 0~1은 블록코딩 API 사용, 나머지는 기존 API 사용
+      const apiEndpoint = userLevel <= 1 ? "/api/block-coding/generate" : "/api/problem-bank/generate";
+      
+      const res = await fetch(apiEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
       });
       if (!res.ok) throw new Error(await res.text());
-      const j: Problem = await res.json();
+      const response = await res.json();
+      // 블록코딩 API 응답 구조: { success: true, data: problem }
+      const j: Problem = userLevel <= 1 ? response.data : response;
       setProblem(j);
     } catch (e: any) {
       setErr(String(e?.message || e));
@@ -292,7 +297,6 @@ export default function SolvePage() {
           {problem && uiLevel <= 1 && (
             <BlockCodingPanel
               problem={problem}
-              orderedBlanks={orderedBlanks}
               CLIENT_ID={CLIENT_ID}
             />
           )}
@@ -318,7 +322,7 @@ export default function SolvePage() {
 
 // --- 공통 소형 컴포넌트 ---
 
-function DragToken({ token }: { token: string }) {
+function DragToken({ token, type = 'answer' }: { token: string; type?: 'answer' | 'distractor' }) {
   const [dragging, setDragging] = useState(false);
 
   const onDragStart = (e: React.DragEvent) => {
@@ -349,13 +353,21 @@ function DragToken({ token }: { token: string }) {
     fontWeight: 600,
     letterSpacing: 0.1,
     borderRadius: 14,
-    border: '2px solid #7C83FF',                        // 보라 테두리
-    background: 'linear-gradient(180deg, #EEF2FF 0%, #E0E7FF 100%)',
-    color: '#1e1b4b',
+    border: type === 'answer' 
+      ? '2px solid #7C83FF'  // 정답: 보라색
+      : '2px solid #FF6B6B', // 오답: 빨간색
+    background: type === 'answer'
+      ? 'linear-gradient(180deg, #EEF2FF 0%, #E0E7FF 100%)'  // 정답: 보라색 그라데이션
+      : 'linear-gradient(180deg, #FFF1F1 0%, #FFE5E5 100%)', // 오답: 빨간색 그라데이션
+    color: type === 'answer' ? '#1e1b4b' : '#7F1D1D',
     // 살짝 떠있는 느낌 + 드래그 시 눌리는 느낌
     boxShadow: dragging
-      ? '0 1px 0 #c7d2fe, 0 6px 14px rgba(99,102,241,0.18)'
-      : '0 2px 0 #c7d2fe, 0 4px 10px rgba(99,102,241,0.15)',
+      ? type === 'answer'
+        ? '0 1px 0 #c7d2fe, 0 6px 14px rgba(99,102,241,0.18)'
+        : '0 1px 0 #fecaca, 0 6px 14px rgba(239,68,68,0.18)'
+      : type === 'answer'
+        ? '0 2px 0 #c7d2fe, 0 4px 10px rgba(99,102,241,0.15)'
+        : '0 2px 0 #fecaca, 0 4px 10px rgba(239,68,68,0.15)',
     transform: dragging ? 'translateY(1px) scale(0.98)' : 'translateY(0)',
     transition: 'all .12s ease',
     userSelect: 'none',
@@ -448,41 +460,36 @@ function InputSlot({
   );
 }
 
-// --- 블록코딩(4스택) ---
+// --- 블록코딩(새로운 로직) ---
 function BlockCodingPanel({
   problem,
-  orderedBlanks,
   CLIENT_ID,
 }: {
   problem: any;
-  orderedBlanks: any[];
   CLIENT_ID: string;
 }) {
-  const segs = useMemo(
-    () => parseClozeSegments(problem.code || ""),
-    [problem?.code]
-  );
-  const blankIds = useMemo(
-    () =>
-      orderedBlanks
-        .slice(0, 2) // 레벨0: 최대 2칸
-        .map((b) => Number(String(b.id).replace(/\D/g, "")))
-        .filter((n) => n > 0),
-    [orderedBlanks]
-  );
+  // 새로운 블록코딩 문제 구조 사용
+  const blankedCode = problem.blankedCode || "";
+  const blocks = problem.blocks || [];
+  const blankCount = problem.blankCount || 1;
+  
   const [filled, setFilled] = useState<Record<number, string | null>>({});
-  const tokens = useMemo(() => {
-    const arr = orderedBlanks
-      .slice(0, 2) // 레벨0: 최대 2개
-      .map((b: any) => (b.answer ?? "").trim())
-      .filter(Boolean);
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
+  
+  // 블랭크 ID 추출 (BLANK_1, BLANK_2 등)
+  const blankIds = useMemo(() => {
+    const ids: number[] = [];
+    for (let i = 1; i <= blankCount; i++) {
+      if (blankedCode.includes(`BLANK_${i}`)) {
+        ids.push(i);
+      }
     }
-    return a;
-  }, [orderedBlanks]);
+    return ids;
+  }, [blankedCode, blankCount]);
+  
+  // 드래그할 블록들 (정답 + 오답)
+  const draggableBlocks = useMemo(() => {
+    return blocks.filter((block: any) => block.type === 'answer' || block.type === 'distractor');
+  }, [blocks]);
 
   useEffect(() => {
     const init: Record<number, string | null> = {};
@@ -495,81 +502,107 @@ function BlockCodingPanel({
   const onClear = (id: number) => setFilled((p) => ({ ...p, [id]: null }));
 
   const submit = async () => {
-    const blanks_user = orderedBlanks.map((b: any) => ({
-      id: Number(String(b.id).replace(/\D/g, "")),
-      value: filled[Number(String(b.id).replace(/\D/g, ""))] ?? "",
-    }));
+    const userAnswers = blankIds.map(id => filled[id] || "");
+    
     if (
-      blanks_user.some((x) => !x.value) &&
+      userAnswers.some((answer) => !answer) &&
       !confirm("빈칸이 비어 있습니다. 제출할까요?")
     )
       return;
+      
     const body = {
-      mode: "cloze",
-      client_id: CLIENT_ID,
-      problem_id: problem.id,
-      blanks_user,
-      started_at: new Date().toISOString(),
-      finished_at: new Date().toISOString(),
+      problem,
+      userAnswers
     };
+    
     try {
-      const r = await fetch("/api/solve/grade", {
+      const r = await fetch("/api/block-coding/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!r.ok) throw new Error(await r.text());
-      alert(JSON.stringify(await r.json(), null, 2));
+      const result = await r.json();
+      alert(JSON.stringify(result.data, null, 2));
     } catch (error: any) {
       alert("제출 오류: " + (error?.message || error));
     }
   };
 
+  // 블랭크가 포함된 코드를 렌더링하는 함수
+  const renderBlankedCode = () => {
+    const parts = blankedCode.split(/(BLANK_\d+)/);
+    return parts.map((part: string, index: number) => {
+      if (part.startsWith('BLANK_')) {
+        const blankId = parseInt(part.replace('BLANK_', ''));
+        return (
+          <DropSlot
+            key={`slot-${blankId}-${index}`}
+            id={blankId}
+            value={filled[blankId]}
+            onDropToken={onDropToken}
+            onClear={onClear}
+          />
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
   return (
     <section className="flex flex-col gap-4">
+      {/* 문제 정보 */}
+      <div style={styles.panel}>
+        <div style={styles.sectionTitle}>문제 정보</div>
+        <div className="text-sm text-gray-300">
+          <p><strong>제목:</strong> {problem.title}</p>
+          <p><strong>설명:</strong> {problem.description}</p>
+          <p><strong>지시사항:</strong> {problem.instruction}</p>
+          <p><strong>레벨:</strong> {problem.level} | <strong>언어:</strong> {problem.language}</p>
+        </div>
+      </div>
+      
       {/* 1) 코드(드롭 슬롯) */}
       <div style={styles.codePanel}>
         <div style={{ ...styles.sectionTitle, color: "#e5e7eb" }}>
-          1) Code with word blanks
+          1) 코드에 빈칸 채우기
         </div>
         <pre
           className="rounded p-3 overflow-auto text-[13px] leading-6"
           style={{ background: "transparent" }}
         >
           <code className="font-mono whitespace-pre-wrap break-words">
-            {segs.map((s, i) =>
-              s.t === "text" ? (
-                <span key={i}>{s.v}</span>
-              ) : (
-                <DropSlot
-                  key={`slot-${s.id}-${i}`}
-                  id={s.id}
-                  value={filled[s.id]}
-                  onDropToken={onDropToken}
-                  onClear={onClear}
-                />
-              )
-            )}
+            {renderBlankedCode()}
           </code>
         </pre>
       </div>
-      {/* 2) 단어 블록 */}
+      
+      {/* 2) 드래그할 블록들 */}
       <div style={styles.panel}>
-        <div style={styles.sectionTitle}>2) Draggable Word Blocks</div>
+        <div style={styles.sectionTitle}>2) 드래그할 블록들</div>
         <div className="flex flex-wrap gap-2">
-          {tokens.length ? (
-            tokens.map((t: string, idx: number) => (
-              <DragToken key={`${t}-${idx}`} token={t} />
+          {draggableBlocks.length ? (
+            draggableBlocks.map((block: any, idx: number) => (
+              <DragToken 
+                key={`${block.id}-${idx}`} 
+                token={block.text}
+                type={block.type}
+              />
             ))
           ) : (
             <span className="text-sm text-gray-500">블록 없음</span>
           )}
         </div>
+        <div className="text-xs text-gray-400 mt-2">
+          정답 블록: {blocks.filter((b: any) => b.type === 'answer').length}개 | 
+          오답 블록: {blocks.filter((b: any) => b.type === 'distractor').length}개
+        </div>
       </div>
+      
       {/* 3) 제출 */}
       <div>
         <button onClick={submit} style={styles.submit}>
-          3) Submit
+          3) 제출하기
         </button>
       </div>
     </section>
