@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './LevelTestPage.css';
 
 interface TestQuestion {
@@ -18,12 +19,16 @@ interface TestResult {
 }
 
 const LevelTestPage: React.FC = () => {
+  const navigate = useNavigate();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answers, setAnswers] = useState<number[]>([]);
   const [isTestComplete, setIsTestComplete] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAlreadyCompleted, setIsAlreadyCompleted] = useState(false);
+  const [currentLevel, setCurrentLevel] = useState<number | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(true);
 
   // 시력검사식 레벨테스트 문제들 (0-5단계)
   const testQuestions: TestQuestion[] = [
@@ -145,6 +150,36 @@ const LevelTestPage: React.FC = () => {
       explanation: "useRef는 메모이제이션과 관련이 없는 Hook입니다."
     }
   ];
+
+  // 페이지 로드 시 레벨 테스트 완료 여부 확인
+  useEffect(() => {
+    checkLevelTestStatus();
+  }, []);
+
+  const checkLevelTestStatus = async () => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_BASE_URL}/api/level-test/check`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.isCompleted) {
+          setIsAlreadyCompleted(true);
+          setCurrentLevel(data.currentLevel);
+        }
+      }
+    } catch (error) {
+      console.error('레벨 테스트 상태 확인 오류:', error);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
 
   const handleAnswerSelect = (answerIndex: number) => {
     setSelectedAnswer(answerIndex);
@@ -287,6 +322,53 @@ const LevelTestPage: React.FC = () => {
 
   const currentQ = testQuestions[currentQuestion];
   const progress = ((currentQuestion + 1) / testQuestions.length) * 100;
+
+  // 상태 확인 중일 때 로딩 표시
+  if (checkingStatus) {
+    return (
+      <div className="level-test-container">
+        <div className="text-center">
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3">레벨 테스트 상태를 확인하는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 이미 레벨 테스트를 완료한 경우
+  if (isAlreadyCompleted) {
+    return (
+      <div className="container py-5">
+        <div className="row justify-content-center">
+          <div className="col-md-8 col-lg-6">
+            <div className="card">
+              <div className="card-body p-4 text-center">
+                <div className="alert alert-info">
+                  <h4>이미 레벨 테스트를 완료했습니다!</h4>
+                  <p className="mb-2">레벨 테스트는 한 번만 응시할 수 있습니다.</p>
+                  <p className="mb-0">현재 레벨은 <strong>Level {currentLevel} </strong> 입니다. </p>
+                </div>
+                <button 
+                  className="btn btn-primary me-2" 
+                  onClick={() => navigate('/home')}
+                >
+                  홈으로 가기
+                </button>
+                <button 
+                  className="btn btn-outline-secondary" 
+                  onClick={() => navigate('/dashboard')}
+                >
+                  학습 통계로 가기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="level-test-container">
