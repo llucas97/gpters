@@ -58,22 +58,15 @@ router.post('/submit', isAuthenticated, async (req, res) => {
       { where: { user_id: userId } }
     );
 
-    console.log('✅ 설문 저장 완료:', survey.survey_id);
-
     return res.status(201).json({ 
       success: true, 
       message: '설문조사가 성공적으로 저장되었습니다.',
-      data: {
-        surveyId: survey.survey_id,
-        userId: userId
-      }
     });
   } catch (err) {
     console.error('❌ 설문 저장 중 오류:', err);
     return res.status(500).json({ 
       success: false, 
       message: '서버 오류가 발생했습니다.', 
-      error: err.message 
     });
   }
 });

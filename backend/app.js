@@ -15,6 +15,7 @@ const problemRoutes = require('./routes/problem');
 // 새로운 테스트 시스템 라우터들
 const resultRoutes = require('./routes/resultRoutes');
 const levelRoutes = require('./routes/levelRoutes');
+const levelTestRoutes = require('./routes/levelTest');
 const analysisRoutes = require('./routes/analysisRoutes');
 
 const problemBankRoutes = require('./routes/problemBank');
@@ -71,6 +72,7 @@ app.use('/survey', surveyRouter);
 // 새로운 테스트 시스템 API 라우터들
 app.use('/api/results', resultRoutes);
 app.use('/api/level', levelRoutes);
+app.use('/api/level-test', levelTestRoutes);
 app.use('/api/analysis', analysisRoutes);
 
 app.use('/api/problem-bank', problemBankRoutes);
