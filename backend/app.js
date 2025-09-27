@@ -41,6 +41,7 @@ app.use(session({
   cookie: {
     httpOnly: true,
     secure: false, // localhost에서는 false
+    maxAge: 24 * 60 * 60 * 1000 // 기본 24시간 (1일)
   }
 }));
 

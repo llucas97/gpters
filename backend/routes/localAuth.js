@@ -5,26 +5,51 @@ const passport = require('passport');
 const router = express.Router();
 
 // ✅ 로그인 - 세션 기반
-router.post('/login', passport.authenticate('local'), async (req, res) => {
-  try {
-    // passport가 자동으로 req.login() 수행 → 세션에 저장됨
-    const user = await db.User.findByPk(req.user.user_id, {
-      attributes: ['user_id', 'email', 'username', 'full_name', 'survey_completed']
-    });
+router.post('/login', (req, res, next) => {
+  passport.authenticate('local', (err, user, info) => {
+    if (err) {
+      console.error('❌ Passport 인증 에러:', err);
+      return res.status(500).json({ message: '서버 오류', error: err.message });
+    }
+    
+    if (!user) {
+      return res.status(401).json({ message: info.message || '로그인 실패' });
+    }
 
-    res.json({ 
-      success: true, 
-      user: {
-        id: user.user_id,
-        email: user.email,
-        username: user.username,
-        survey_completed: user.survey_completed
+    // rememberMe 옵션에 따라 세션 만료 시간 설정
+    const rememberMe = req.body.rememberMe === true;
+    const maxAge = rememberMe ? 2 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 2시간 또는 1일
+    
+    req.login(user, (err) => {
+      if (err) {
+        console.error('❌ req.login 에러:', err);
+        return res.status(500).json({ message: '서버 오류', error: err.message });
       }
+
+      // 세션 쿠키 만료 시간 설정
+      req.session.cookie.maxAge = maxAge;
+      
+      // 사용자 정보 조회 및 응답
+      db.User.findByPk(user.user_id, {
+        attributes: ['user_id', 'email', 'username', 'full_name', 'survey_completed']
+      }).then(userData => {
+        console.log(`✅ 로그인 성공: ${userData.email} (rememberMe: ${rememberMe}, maxAge: ${maxAge}ms)`);
+        
+        res.json({ 
+          success: true, 
+          user: {
+            id: userData.user_id,
+            email: userData.email,
+            username: userData.username,
+            survey_completed: userData.survey_completed
+          }
+        });
+      }).catch(err => {
+        console.error('❌ 사용자 정보 조회 에러:', err);
+        res.status(500).json({ message: '서버 오류', error: err.message });
+      });
     });
-  } catch (err) {
-    console.error('❌ 로그인 응답 처리 에러:', err);
-    res.status(500).json({ message: '서버 오류', error: err.message });
-  }
+  })(req, res, next);
 });
 
 // ✅ 현재 로그인된 사용자 정보 조회
