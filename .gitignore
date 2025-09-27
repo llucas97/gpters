@@ -24,7 +24,7 @@ node_modules/
 # OS specific
 .DS_Store
 
-DB_HOST=34.64.121.130
+DB_HOST=34.136.177.249
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=Kwu2025!
