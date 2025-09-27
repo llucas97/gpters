@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../models');
-const { VM } = require('vm2'); // js-only sandboxes for editor mode
+const vm = require('vm'); // js-only sandboxes for editor mode
 
 // id 정상화: "__1__" → 1, "1" → 1
 const normId = (x) => {
@@ -95,14 +95,11 @@ router.post('/grade', async (req, res) => {
       const results = [];
       try {
         // 샌드박스 준비
-        const vm = new VM({
-          timeout: 1000,
-          eval: false,
-          wasm: false,
-          sandbox: {}
-        });
+        const sandbox = {};
+        const context = vm.createContext(sandbox);
+        
         // 유저 코드 + solve 함수 존재 확인
-        vm.run(`${code}\nif (typeof solve !== 'function') { throw new Error('solve function missing'); }`);
+        vm.runInContext(`${code}\nif (typeof solve !== 'function') { throw new Error('solve function missing'); }`, context, { timeout: 1000 });
 
         for (const ex of examples) {
           // input 을 배열/단일로 파싱 시도 (간단한 규칙)
@@ -121,7 +118,7 @@ router.post('/grade', async (req, res) => {
           const expected = String(ex.output ?? '').trim();
           let got;
           try {
-            got = vm.run(`solve.apply(null, ${JSON.stringify(args)})`);
+            got = vm.runInContext(`solve.apply(null, ${JSON.stringify(args)})`, context, { timeout: 1000 });
           } catch (err) {
             results.push({ input: args, error: String(err?.message || err) });
             continue;

@@ -10,6 +10,7 @@ import LevelTestPage from "./pages/LevelTestPage";
 import ProblemsPage from "./pages/ProblemsPage";
 import DashboardPage from "./pages/DashboardPage";
 import SolvePage from "./pages/SolvePage";
+import SolvedPage from "./pages/SolvedPage";
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             <Route path="/quiz" element={<Navigate to="/solve" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/solve" element={<SolvePage />} />
+            <Route path="/solved" element={<SolvedPage />} />
           </Routes>
         </main>
       </div>
