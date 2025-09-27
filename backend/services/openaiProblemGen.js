@@ -12,7 +12,7 @@ const {
   safeParse, 
   extractFirstJsonLike, 
   normalizeJsPlaceholders 
-} = require('./openaiBlockCoding');
+} = require('./openaiCloze');
 
 // 블록코딩 전용 함수들 import
 const { generateBlockCodingProblem } = require('./openaiBlockCoding');
