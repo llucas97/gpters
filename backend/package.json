@@ -5,8 +5,12 @@
   "type": "commonjs",
   "scripts": {
     "start": "node app.js",
-    "dev": "node app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon app.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:boj": "jest bojSteps.test.js bojApi.test.js",
+    "test:user-level": "jest userLevelProblemGeneration.test.js"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +24,8 @@
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "express-validator": "^7.2.1",
+    "jsdom": "^27.0.0",
+    "json5": "^2.2.3",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.14.2",
     "passport": "^0.7.0",
@@ -27,6 +33,12 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-kakao": "^1.0.1",
     "passport-local": "^1.0.0",
-    "sequelize": "^6.37.7"
+    "sequelize": "^6.37.7",
+    "vm2": "^3.9.19"
+  },
+  "devDependencies": {
+    "jest": "^30.1.3",
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.4"
   }
 }

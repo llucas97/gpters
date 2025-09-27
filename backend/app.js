@@ -18,7 +18,10 @@ const levelRoutes = require('./routes/levelRoutes');
 const analysisRoutes = require('./routes/analysisRoutes');
 const levelTestRoutes = require('./routes/levelTest');
 
-const quizRoutes = require('./routes/quiz');
+const problemBankRoutes = require('./routes/problemBank');
+const analyticsRoutes = require('./routes/analytics');
+const solveRoutes = require('./routes/solve');
+const bojRoutes = require('./routes/boj');
 
 const app = express();
 initPassport();
@@ -71,7 +74,10 @@ app.use('/api/results', resultRoutes);
 app.use('/api/level', levelRoutes);
 app.use('/api/analysis', analysisRoutes);
 
-app.use('/api/quiz', quizRoutes);
+app.use('/api/problem-bank', problemBankRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/solve', solveRoutes);
+app.use('/api/boj', bojRoutes);
 
 // API 전용 백엔드 - HTML 라우트 제거됨
 
@@ -87,12 +93,16 @@ app.get('/logout', (req, res, next) => {
 // ✅ API 라우터
 app.use('/api/auth', localAuthRoutes);     // /api/auth 경로로 변경    // 로컬 회원가입/로그인
 
-// ✅ 서버 시작
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ✅ 서버 시작 (테스트 환경이 아닌 경우에만)
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
+  // ✅ DB 연결
+  db.sequelize.authenticate()
+    .then(() => console.log("RDS 연결 성공"))
+    .catch(err => console.error("RDS 연결 실패:", err));
+}
 
-// ✅ DB 연결
-db.sequelize.authenticate()
-  .then(() => console.log("RDS 연결 성공"))
-  .catch(err => console.error("RDS 연결 실패:", err));
+// 테스트를 위해 app export
+module.exports = app;
