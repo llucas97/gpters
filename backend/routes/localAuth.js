@@ -80,7 +80,6 @@ router.post('/signup', async (req, res) => {
     console.log('  - username:', username);
     console.log('  - full_name:', full_name);
 
-
     const user = await db.User.create({
       email,
       username,

@@ -16,7 +16,6 @@ const problemRoutes = require('./routes/problem');
 const resultRoutes = require('./routes/resultRoutes');
 const levelRoutes = require('./routes/levelRoutes');
 const analysisRoutes = require('./routes/analysisRoutes');
-const levelTestRoutes = require('./routes/levelTest');
 
 const problemBankRoutes = require('./routes/problemBank');
 const analyticsRoutes = require('./routes/analytics');
@@ -66,7 +65,6 @@ app.use('/api/auth', localAuthRoutes);     // 로그인/회원가입
 app.use('/api/profile', profileRoutes);
 app.use('/api/survey', surveyRouter);
 app.use('/api/problems', problemRoutes);
-app.use('/api/level-test', levelTestRoutes);
 app.use('/survey', surveyRouter);
 
 // 새로운 테스트 시스템 API 라우터들
@@ -90,8 +88,7 @@ app.get('/logout', (req, res, next) => {
 
 
 
-// ✅ API 라우터
-app.use('/api/auth', localAuthRoutes);     // /api/auth 경로로 변경    // 로컬 회원가입/로그인
+
 
 // ✅ 서버 시작 (테스트 환경이 아닌 경우에만)
 if (process.env.NODE_ENV !== 'test') {
