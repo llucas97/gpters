@@ -22,6 +22,8 @@ const analyticsRoutes = require('./routes/analytics');
 const solveRoutes = require('./routes/solve');
 const bojRoutes = require('./routes/boj');
 const blockCodingRoutes = require('./routes/blockCoding');
+const codeOrderingRoutes = require('./routes/codeOrdering');
+const bugFixRoutes = require('./routes/bugFix');
 
 const app = express();
 initPassport();
@@ -78,6 +80,8 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/solve', solveRoutes);
 app.use('/api/boj', bojRoutes);
 app.use('/api/block-coding', blockCodingRoutes);
+app.use('/api/code-ordering', codeOrderingRoutes);
+app.use('/api/bug-fix', bugFixRoutes);
 
 // API 전용 백엔드 - HTML 라우트 제거됨
 

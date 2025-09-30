@@ -224,8 +224,15 @@ function createBlankedCode(originalCode, keywordsToBlank) {
   
   keywordsToBlank.forEach((keyword, index) => {
     const placeholder = `BLANK_${index + 1}`;
-    // 단어 경계를 고려하여 정확히 매칭
-    const regex = new RegExp(`\\b${keyword}\\b`, 'g');
+    // 특수문자를 이스케이프 처리
+    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+    // 특수문자(+,-,*,/,=)는 단어 경계 없이 매칭, 일반 키워드는 단어 경계 사용
+    const isSpecialChar = /^[+\-*/=]$/.test(keyword);
+    const regex = isSpecialChar 
+      ? new RegExp(escapedKeyword, 'g')
+      : new RegExp(`\\b${escapedKeyword}\\b`, 'g');
+    
     blankedCode = blankedCode.replace(regex, placeholder);
   });
   

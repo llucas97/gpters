@@ -98,4 +98,18 @@ export interface StudyLogData {
   }>;
 }
 
+export type ProblemType =
+  | 'BLOCK_L0'
+  | 'BLOCK_L1'
+  | 'CLOZE_L2'
+  | 'CLOZE_L3';
+
+export interface BaseProblem {
+  id: string;
+  type: ProblemType;
+  prompt: string;            // 빈칸 표시 포함
+  answer: string | string[]; // L2: string, L3: [a,b]
+  distractors?: string[];
+  meta?: Record<string, any>;
+}
 

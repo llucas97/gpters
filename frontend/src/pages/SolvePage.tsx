@@ -169,17 +169,22 @@ export default function SolvePage() {
       const topics = ["graph", "dp", "greedy", "tree", "string", "math"];
       const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
-      // 사용자 현재 레벨에 정확히 맞는 문제 생성
-      const userLevel = user?.current_level ?? 0;
+      // UI Level을 우선 사용하고, 없으면 사용자 현재 레벨 사용
+      const targetLevel = uiLevel; // UI Level 슬라이더 값 사용
 
       const params = {
-        level: userLevel, // 사용자 현재 레벨 그대로 사용
+        level: targetLevel,
         topic: pick(topics),
         language: language, // 현재 선택된 언어 사용
       };
 
-      // 레벨 0~1은 블록코딩 API 사용, 나머지는 기존 API 사용
-      const apiEndpoint = userLevel <= 1 ? "/api/block-coding/generate" : "/api/problem-bank/generate";
+      // 레벨별 API 엔드포인트 결정
+      let apiEndpoint = "/api/problem-bank/generate"; // 기본값
+      if (targetLevel <= 1) {
+        apiEndpoint = "/api/block-coding/generate";
+      }
+      
+      console.log(`[DEBUG] 문제 생성 요청 - 레벨: ${targetLevel}, API: ${apiEndpoint}`, params);
       
       const res = await fetch(apiEndpoint, {
         method: "POST",
@@ -188,8 +193,16 @@ export default function SolvePage() {
       });
       if (!res.ok) throw new Error(await res.text());
       const response = await res.json();
-      // 블록코딩 API 응답 구조: { success: true, data: problem }
-      const j: Problem = userLevel <= 1 ? response.data : response;
+      
+      // API 응답 구조에 따라 데이터 추출
+      let j: Problem;
+      if (targetLevel <= 1) {
+        // 블록코딩 API: { success: true, data: problem }
+        j = response.data;
+      } else {
+        // 기존 problem-bank API: problem 직접 반환
+        j = response;
+      }
       setProblem(j);
     } catch (e: any) {
       setErr(String(e?.message || e));
@@ -244,12 +257,10 @@ export default function SolvePage() {
           >
             {loading ? "생성 중..." : "문제 생성"}
           </button>
-          {user && (
-            <div className="text-xs text-gray-500 mt-1">
-              현재 레벨: {user.current_level ?? 0} (레벨{" "}
-              {user.current_level ?? 0} 문제 생성)
-            </div>
-          )}
+          <div className="text-xs text-gray-500 mt-1">
+            레벨 {uiLevel} 문제 생성
+            {user && ` (계정 레벨: ${user.current_level ?? 0})`}
+          </div>
         </div>
       </div>
 
@@ -310,7 +321,7 @@ export default function SolvePage() {
             />
           )}
 
-          {/* 4–5: 코드 에디터(3스택: 문제 → 에디터 → 제출) */}
+          {/* 4-5: 코드 에디터(3스택: 문제 → 에디터 → 제출) */}
           {problem && uiLevel >= 4 && (
             <CodeEditorPanel problem={problem} CLIENT_ID={CLIENT_ID} />
           )}
@@ -502,31 +513,27 @@ function BlockCodingPanel({
   const onClear = (id: number) => setFilled((p) => ({ ...p, [id]: null }));
 
   const submit = async () => {
-    const userAnswers = blankIds.map(id => filled[id] || "");
-    
-    if (
-      userAnswers.some((answer) => !answer) &&
-      !confirm("빈칸이 비어 있습니다. 제출할까요?")
-    )
-      return;
-      
+    const blanks_user = blankIds.map((id: number) => ({
+      id: id,
+      value: filled[id] ?? "",
+    }));
+    if (blanks_user.some((x: any) => !x.value) && !confirm("빈칸이 비어 있습니다. 제출할까요?")) return;
+
     const body = {
-      problem,
-      userAnswers
+      mode: "cloze",
+      client_id: CLIENT_ID,
+      problem_id: problem.id,
+      blanks_user
     };
-    
-    try {
-      const r = await fetch("/api/block-coding/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) throw new Error(await r.text());
-      const result = await r.json();
-      alert(JSON.stringify(result.data, null, 2));
-    } catch (error: any) {
-      alert("제출 오류: " + (error?.message || error));
-    }
+
+    const r = await fetch("/api/solve/grade", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    // data.accuracy, data.feedback, data.blanks_total 등으로 결과 표시
+    alert(data.ok === false ? `오류: ${data.error || '채점 실패'}` : `정답률: ${data.accuracy}%`);
   };
 
   // 블랭크가 포함된 코드를 렌더링하는 함수
@@ -618,12 +625,20 @@ function CodeEditorPanel({
   CLIENT_ID: string;
 }) {
   const [code, setCode] = useState<string>("");
+  const [validationResult, setValidationResult] = useState<any>(null);
+  const [isValidating, setIsValidating] = useState<boolean>(false);
 
   useEffect(() => {
-    const raw = stripCommentedPlaceholdersRaw(problem?.code || "");
-    setCode(
-      raw.replace(/__\s*\d+\s*__/g, "") || "# write your solution here\n"
-    );
+    // 레벨 4-5는 템플릿 코드 사용, 나머지는 기존 로직
+    if (problem?.level === 4 || problem?.level === 5) {
+      const templateCode = problem?.metadata?.templateCode || problem?.code || "";
+      setCode(templateCode);
+    } else {
+      const raw = stripCommentedPlaceholdersRaw(problem?.code || "");
+      setCode(
+        raw.replace(/__\s*\d+\s*__/g, "") || "# write your solution here\n"
+      );
+    }
   }, [problem?.id]);
 
   const lang = (problem?.language || "python").toLowerCase();
@@ -765,26 +780,63 @@ function CodeEditorPanel({
   };
 
   const submit = async () => {
-    const body = {
-      mode: "editor",
-      client_id: CLIENT_ID,
-      problem_id: problem.id,
-      language: lang,
-      code: code, // code_user -> code로 변경
-      started_at: new Date().toISOString(),
-      finished_at: new Date().toISOString(),
-    };
-    try {
-      const r = await fetch("/api/solve/grade", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) throw new Error(await r.text());
-      const j = await r.json();
-      alert(JSON.stringify(j, null, 2));
-    } catch (error: any) {
-      alert("제출 오류: " + (error?.message || error));
+    // 레벨 4-5는 새로운 코드 검증 API 사용
+    if (problem?.level === 4 || problem?.level === 5) {
+      setIsValidating(true);
+      setValidationResult(null);
+      
+      try {
+        const response = await fetch("/api/problem-bank/validate-code", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            problemId: problem.id,
+            userCode: code,
+            language: lang,
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+        
+        const result = await response.json();
+        setValidationResult(result.validation);
+        
+        // 결과 표시
+        if (result.validation.allPassed) {
+          alert(`🎉 모든 테스트 케이스를 통과했습니다!\n점수: ${result.validation.score}점`);
+        } else {
+          alert(`❌ 일부 테스트 케이스가 실패했습니다.\n통과: ${result.validation.passedCount}/${result.validation.totalCount}\n점수: ${result.validation.score}점`);
+        }
+      } catch (error: any) {
+        alert("코드 검증 오류: " + (error?.message || error));
+      } finally {
+        setIsValidating(false);
+      }
+    } else {
+      // 기존 레벨들은 기존 API 사용
+      const body = {
+        mode: "editor",
+        client_id: CLIENT_ID,
+        problem_id: problem.id,
+        language: lang,
+        code: code,
+        started_at: new Date().toISOString(),
+        finished_at: new Date().toISOString(),
+      };
+      try {
+        const r = await fetch("/api/solve/grade", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) throw new Error(await r.text());
+        const j = await r.json();
+        alert(JSON.stringify(j, null, 2));
+      } catch (error: any) {
+        alert("제출 오류: " + (error?.message || error));
+      }
     }
   };
 
@@ -819,11 +871,58 @@ function CodeEditorPanel({
         />
       </div>
 
-      {/* 3) 제출하기 */}
+      {/* 3) 레벨 4-5 검증 결과 표시 */}
+      {(problem?.level === 4 || problem?.level === 5) && validationResult && (
+        <div style={styles.panel}>
+          <div style={{ ...styles.sectionTitle, color: "#e5e7eb" }}>
+            3) 테스트 결과 ({validationResult.passedCount}/{validationResult.totalCount})
+          </div>
+          <div className="text-sm space-y-2">
+            {validationResult.results.map((result: any, index: number) => (
+              <div 
+                key={index} 
+                className={`p-2 rounded ${result.passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+              >
+                <div className="font-semibold">
+                  테스트 케이스 {result.testCase}: {result.passed ? '✅ 통과' : '❌ 실패'}
+                </div>
+                {result.error && (
+                  <div className="text-xs mt-1">오류: {result.error}</div>
+                )}
+                {!result.passed && !result.error && (
+                  <div className="text-xs mt-1">
+                    예상 결과: {JSON.stringify(result.expected)}<br/>
+                    실제 결과: {JSON.stringify(result.actual)}
+                  </div>
+                )}
+              </div>
+            ))}
+            <div className="font-semibold mt-3 text-white">
+              점수: {validationResult.score}점
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4) 제출하기 */}
       <div>
-        <button onClick={submit} style={styles.submit}>
-          3) 제출하기
+        <button 
+          onClick={submit} 
+          style={{
+            ...styles.submit,
+            opacity: isValidating ? 0.6 : 1,
+            cursor: isValidating ? 'not-allowed' : 'pointer'
+          }}
+          disabled={isValidating}
+        >
+          {isValidating ? '검증 중...' : (problem?.level === 4 || problem?.level === 5) ? '코드 검증하기' : '제출하기'}
         </button>
+        {(problem?.level === 4 || problem?.level === 5) && (
+          <div className="text-xs text-gray-400 mt-2">
+            💡 빈 줄(// BLANK_X 주석)에 코드를 직접 작성하세요.
+            {problem?.level === 4 ? ' (1개 빈 줄)' : ' (2개 빈 줄)'}
+          </div>
+        )}
       </div>
     </section>
   );

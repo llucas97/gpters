@@ -338,3 +338,13 @@ a:hover {
     font-size: 1.75rem;
   }
 }
+
+/* Monaco Editor Bug Hint Styles */
+.bug-hint-line {
+  background-color: rgba(255, 200, 0, 0.1) !important;
+}
+
+.bug-hint-line::before {
+  content: '🐞';
+  margin-right: 5px;
+}
