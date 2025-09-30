@@ -43,11 +43,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
 
-      // 레벨 및 경험치
+      // 레벨 및 경험치 (-1: 레벨테스트 미완료, 0~5: 실제 레벨)
       current_level: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        defaultValue: 0,
+        defaultValue: -1,
       },
       experience_points: {
         type: DataTypes.INTEGER,

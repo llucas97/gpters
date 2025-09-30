@@ -35,6 +35,7 @@ export const registerUser = async (data: {
 export const loginUser = async (data: {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }) => {
   const response = await fetch(`${API_URL}/api/auth/login`, {
     method: 'POST',
@@ -43,6 +44,7 @@ export const loginUser = async (data: {
     body: JSON.stringify({
       email: data.email,
       password: data.password,
+      rememberMe: data.rememberMe || false,
     }),
   });
 

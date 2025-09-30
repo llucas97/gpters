@@ -46,18 +46,19 @@ const Navbar = () => {
                 레벨테스트
               </Link>
             </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/profile">
-                <i className="bi bi-person-circle me-1"></i>
-                프로필
-              </Link>
-            </li>
+
             
             {isAuthenticated && (
               <>
                 <li className="nav-item">
                   <Link className="nav-link" to="/solve">
                     <i className="bi bi-code-slash me-1"></i>
+                    문제 해결
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/solved">
+                    <i className="bi bi-puzzle me-1"></i>
                     문제 해결
                   </Link>
                 </li>
@@ -69,14 +70,14 @@ const Navbar = () => {
                 </li>
               </>
             )}
-            
+
             {isAuthenticated ? (
               <>
-                <li className="nav-item dropdown">
-                  <span className="nav-link">
-                    <i className="bi bi-person-check me-1"></i>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/profile">
+                    <i className="bi bi-person-circle me-1"></i>
                     {user?.username || '사용자'}님
-                  </span>
+                  </Link>
                 </li>
                 <li className="nav-item">
                   <button 
@@ -91,12 +92,14 @@ const Navbar = () => {
             ) : (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/login">
+                  <Link className="nav-link px-3" to="/login" style={{ border: 'none' }}>
+                    <i className="bi bi-box-arrow-in-right me-1"></i>
                     로그인
                   </Link>
                 </li>
                 <li className="nav-item">
                   <Link className="nav-link btn btn-primary text-white px-3 ms-2" to="/signup">
+                    <i className="bi bi-person-plus me-1"></i>
                     회원가입
                   </Link>
                 </li>

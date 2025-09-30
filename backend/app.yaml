@@ -3,8 +3,8 @@ instance_class: F1
 
 env_variables:
   JWT_SECRET: gpters123!@
-  DB_HOST: database1.cna2w8q883ko.ap-northeast-2.rds.amazonaws.com
-  DB_USER: admin
-  DB_PASSWORD: kwu2025!
-  DB_NAME: database1
+  DB_HOST: 34.136.177.249
+  DB_USER: root
+  DB_PASSWORD: Kwu2025!
+  DB_NAME: gptersdb
   DB_PORT: "3306"

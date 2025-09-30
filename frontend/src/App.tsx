@@ -7,9 +7,9 @@ import SignupPage from "./pages/SignupPage";
 import ProfilePage from "./pages/ProfilePage";
 import SurveyPage from "./pages/SurveyPage";
 import LevelTestPage from "./pages/LevelTestPage";
-import ProblemsPage from "./pages/ProblemsPage";
 import DashboardPage from "./pages/DashboardPage";
 import SolvePage from "./pages/SolvePage";
+import SolvedPage from "./pages/SolvedPage";
 
 function App() {
   return (
@@ -25,10 +25,11 @@ function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/survey" element={<SurveyPage />} />
             <Route path="/level-test" element={<LevelTestPage />} />
-            <Route path="/problems" element={<ProblemsPage />} />
+            <Route path="/problems" element={<DashboardPage />} />
             <Route path="/quiz" element={<Navigate to="/solve" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/solve" element={<SolvePage />} />
+            <Route path="/solved" element={<SolvedPage />} />
           </Routes>
         </main>
       </div>

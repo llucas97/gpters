@@ -12,6 +12,7 @@ const LoginPage = () => {
   })
   const [errors, setErrors] = useState<{[key: string]: string}>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -58,10 +59,11 @@ const LoginPage = () => {
     
     try {
       // 실제 API 호출
-      console.log('로그인 시도:', formData)
+      console.log('로그인 시도:', formData, 'rememberMe:', rememberMe)
       const loginResponse = await loginUser({
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        rememberMe: rememberMe
       })
       
       console.log('로그인 응답:', loginResponse)
@@ -167,6 +169,8 @@ const LoginPage = () => {
             type="checkbox" 
             className="form-check-input" 
             id="rememberMe" 
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
           />
           <label className="form-check-label" htmlFor="rememberMe">
             로그인 상태 유지
