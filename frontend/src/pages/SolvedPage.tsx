@@ -212,7 +212,7 @@ export default function SolvedPage() {
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string>("");
 
-  // 문제 생성 함수 (SolvePage.tsx의 fetchProblem 로직 적용)
+  // 문제 생성 함수 - 모든 레벨에서 드래그 앤 드롭 방식 사용
   const handleGenerateProblem = async () => {
     try {
       setLoading(true);
@@ -229,8 +229,8 @@ export default function SolvedPage() {
         language: language,
       };
 
-      // 레벨 0~1은 블록코딩 API 사용, 나머지는 기존 API 사용
-      const apiEndpoint = targetLevel <= 1 ? "/api/block-coding/generate" : "/api/problem-bank/generate";
+      // 모든 레벨에서 블록코딩 API 사용 (드래그 앤 드롭)
+      const apiEndpoint = "/api/block-coding/generate";
       
       const res = await fetch(apiEndpoint, {
         method: "POST",
@@ -242,7 +242,7 @@ export default function SolvedPage() {
       
       const response = await res.json();
       // 블록코딩 API 응답 구조: { success: true, data: problem }
-      const problemData: Problem = targetLevel <= 1 ? response.data : response;
+      const problemData: Problem = response.data;
       
       setProblem(problemData);
       setUserAnswers({});
@@ -272,56 +272,40 @@ export default function SolvedPage() {
     });
   };
 
-  // 제출하기 (SolvePage.tsx의 블록코딩 제출 로직 적용)
+  // 제출하기 - 모든 레벨에서 블록코딩 제출 로직 사용
   const handleSubmit = async () => {
     if (!problem) return;
     
-    // UI Level에 따른 제출 로직 분기
-    if (uiLevel <= 1) {
-      // 블록코딩 제출 로직
-      const blankCount = problem.blankCount || 1;
-      const userAnswersArray = [];
-      
-      for (let i = 1; i <= blankCount; i++) {
-        userAnswersArray.push(userAnswers[i] || "");
-      }
-      
-      if (
-        userAnswersArray.some((answer) => !answer) &&
-        !confirm("빈칸이 비어 있습니다. 제출할까요?")
-      ) {
-        return;
-      }
-      
-      const body = {
-        problem,
-        userAnswers: userAnswersArray
-      };
-      
-      try {
-        const r = await fetch("/api/block-coding/validate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!r.ok) throw new Error(await r.text());
-        const result = await r.json();
-        alert(JSON.stringify(result.data, null, 2));
-      } catch (error: any) {
-        alert("제출 오류: " + (error?.message || error));
-      }
-    } else {
-      // 기존 제출 로직 (빈칸채우기/에디터)
-      const filledBlanks = Object.keys(userAnswers).length;
-      const expectedBlanks = problem.blankCount || problem.blanks?.length || 1;
-      
-      if (filledBlanks < expectedBlanks) {
-        alert("모든 빈칸을 채워주세요!");
-        return;
-      }
-      
-      // 여기서 실제 제출 로직 구현 (추후 확장 가능)
-      alert(`제출 완료!\n답안: ${JSON.stringify(userAnswers, null, 2)}`);
+    const blankCount = problem.blankCount || 1;
+    const userAnswersArray = [];
+    
+    for (let i = 1; i <= blankCount; i++) {
+      userAnswersArray.push(userAnswers[i] || "");
+    }
+    
+    if (
+      userAnswersArray.some((answer) => !answer) &&
+      !confirm("빈칸이 비어 있습니다. 제출할까요?")
+    ) {
+      return;
+    }
+    
+    const body = {
+      problem,
+      userAnswers: userAnswersArray
+    };
+    
+    try {
+      const r = await fetch("/api/block-coding/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      const result = await r.json();
+      alert(JSON.stringify(result.data, null, 2));
+    } catch (error: any) {
+      alert("제출 오류: " + (error?.message || error));
     }
   };
 
@@ -366,7 +350,7 @@ export default function SolvedPage() {
                       </div>
                     </div>
                     <small className="text-muted">
-                      0-1: 블록 / 2-3: 빈칸 / 4-5: 에디터
+                      모든 레벨에서 드래그 앤 드롭으로 블록을 채워주세요
                     </small>
                   </div>
 
