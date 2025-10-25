@@ -179,6 +179,7 @@ const SyntaxHighlight = ({ code }: { code: string }) => {
 // 문제 타입 정의 (SolvePage.tsx와 동일하게 확장)
 type Blank = { id: number | string; hint?: string; answer?: string };
 type Example = { input: string; output: string; explanation?: string };
+type Solution = { placeholder: string; answer: string; hint?: string };
 type Problem = {
   id?: number;
   title: string;
@@ -191,11 +192,13 @@ type Problem = {
   examples?: Example[];
   code?: string;
   blanks?: Blank[];
+  solutions?: Solution[];
   level?: number;
   topic?: string;
   language?: string;
   // 블록코딩 관련 필드
   blankedCode?: string;
+  templateCode?: string;
   blocks?: Array<{
     id: number;
     text: string;
@@ -230,7 +233,7 @@ export default function SolvedPage() {
   const [showResultModal, setShowResultModal] = useState<boolean>(false);
   const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
 
-  // 문제 생성 함수 - 모든 레벨에서 드래그 앤 드롭 방식 사용
+  // 문제 생성 함수 - 모든 레벨에서 블록코딩 API 사용, UI만 다르게
   const handleGenerateProblem = async () => {
     try {
       setLoading(true);
@@ -238,7 +241,7 @@ export default function SolvedPage() {
       const topics = ["graph", "dp", "greedy", "tree", "string", "math"];
       const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
-      // UI Level을 기준으로 문제 생성 (사용자 레벨 대신 UI Level 사용)
+      // UI Level을 기준으로 문제 생성
       const targetLevel = uiLevel;
 
       const params = {
@@ -247,7 +250,7 @@ export default function SolvedPage() {
         language: language,
       };
 
-      // 모든 레벨에서 블록코딩 API 사용 (드래그 앤 드롭)
+      // 모든 레벨에서 블록코딩 API 사용 (UI만 레벨에 따라 다름)
       const apiEndpoint = "/api/block-coding/generate";
       
       const res = await fetch(apiEndpoint, {
@@ -259,7 +262,7 @@ export default function SolvedPage() {
       if (!res.ok) throw new Error(await res.text());
       
       const response = await res.json();
-      // 블록코딩 API 응답 구조: { success: true, data: problem }
+      // 블록코딩 API 응답: { success: true, data: problem }
       const problemData: Problem = response.data;
       
       setProblem(problemData);
@@ -273,7 +276,15 @@ export default function SolvedPage() {
     }
   };
 
-  // 드래그 앤 드롭 핸들러
+  // 직접 입력 핸들러 (레벨 3-5용)
+  const handleInputChange = (blankId: number, value: string) => {
+    setUserAnswers(prev => ({
+      ...prev,
+      [blankId]: value
+    }));
+  };
+
+  // 드래그 앤 드롭 핸들러 (레벨 0-2용)
   const handleDrop = (blankId: number, blockText: string) => {
     setUserAnswers(prev => ({
       ...prev,
@@ -290,11 +301,11 @@ export default function SolvedPage() {
     });
   };
 
-  // 제출하기 - 모든 레벨에서 블록코딩 제출 로직 사용
+  // 제출하기 - 모든 레벨에서 블록코딩 검증 API 사용
   const handleSubmit = async () => {
     if (!problem) return;
     
-    const blankCount = problem.blankCount || 1;
+    const blankCount = problem.blankCount || problem.blanks?.length || 1;
     const userAnswersArray = [];
     
     for (let i = 1; i <= blankCount; i++) {
@@ -340,7 +351,7 @@ export default function SolvedPage() {
     }
   };
   
-  // 임시 채점 함수 (나중에 API로 대체)
+  // 임시 채점 함수 - 블록코딩 방식 (모든 레벨)
   const generateMockGrading = (prob: Problem, answers: Record<number, string>): GradingResult => {
     const blankCount = prob.blankCount || 1;
     const correctAnswers = prob.blocks?.filter(b => b.type === 'answer').map(b => b.text) || [];
@@ -429,7 +440,7 @@ export default function SolvedPage() {
                       </div>
                     </div>
                     <small className="text-muted">
-                      모든 레벨에서 드래그 앤 드롭으로 블록을 채워주세요
+                      0-2: 드래그 앤 드롭 / 3-5: 키보드 직접 입력
                     </small>
                   </div>
 
@@ -543,71 +554,116 @@ export default function SolvedPage() {
 
                   {/* 1) 코드에 빈칸 채우기 */}
                   <div className="p-4 bg-white">
-                    <h4 className="text-dark mb-3 fw-bold">1) 코드에 빈칸 채우기</h4>
+                    <h4 className="text-dark mb-3 fw-bold">
+                      1) 코드에 빈칸 채우기
+                      <small className="ms-2 text-muted" style={{ fontSize: '0.9rem' }}>
+                        {uiLevel <= 2 ? '(드래그 앤 드롭)' : '(직접 입력)'}
+                      </small>
+                    </h4>
                     <div className="bg-dark rounded p-3" style={{ borderRadius: "15px", fontFamily: "monospace" }}>
                       <pre className="text-light mb-0" style={{ fontSize: "14px", lineHeight: "1.5" }}>
                         <code>
-                          {(problem.blankedCode || problem.code || "").split(/(BLANK_\d+)/).map((part, index) => {
+                          {(problem.blankedCode || problem.templateCode || problem.code || "").split(/(BLANK_\d+)/).map((part: string, index: number) => {
                             if (part.startsWith('BLANK_')) {
                               const blankId = parseInt(part.replace('BLANK_', ''));
-                              return (
-                                <span
-                                  key={index}
-                                  className="d-inline-block"
-                                  style={{
-                                    background: "#4a5568",
-                                    border: "2px dashed #718096",
-                                    borderRadius: "6px",
-                                    padding: "4px 16px",
-                                    margin: "0 4px",
-                                    minWidth: "120px",
-                                    textAlign: "center",
-                                    color: "#e2e8f0",
-                                    fontSize: "13px",
-                                    fontWeight: "500",
-                                    letterSpacing: "0.5px",
-                                    cursor: "pointer",
-                                    transition: "all 0.2s ease"
-                                  }}
-                                  onDrop={(e) => {
-                                    e.preventDefault();
-                                    const blockText = e.dataTransfer.getData("text/plain");
-                                    if (blockText) handleDrop(blankId, blockText);
-                                  }}
-                                  onDragOver={(e) => {
-                                    e.preventDefault();
-                                    e.currentTarget.style.background = "#5a6578";
-                                    e.currentTarget.style.borderColor = "#a0aec0";
-                                  }}
-                                  onDragLeave={(e) => {
-                                    e.currentTarget.style.background = "#4a5568";
-                                    e.currentTarget.style.borderColor = "#718096";
-                                  }}
-                                >
-                                  {userAnswers[blankId] ? (
-                                    <>
-                                      <span style={{ color: "#90cdf4" }}>{userAnswers[blankId]}</span>
-                                      <button 
-                                        onClick={() => clearBlank(blankId)}
-                                        className="btn btn-sm ms-2"
-                                        style={{ 
-                                          fontSize: "12px", 
-                                          padding: "0 4px", 
-                                          border: "1px solid #718096", 
-                                          background: "#2d3748",
-                                          color: "#e2e8f0",
-                                          borderRadius: "3px",
-                                          lineHeight: "1"
-                                        }}
-                                      >
-                                        ×
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <span style={{ color: "#a0aec0", fontStyle: "italic" }}>BLANK</span>
-                                  )}
-                                </span>
-                              );
+                              
+                              // 레벨 0-2: 드래그 앤 드롭 영역
+                              if (uiLevel <= 2) {
+                                return (
+                                  <span
+                                    key={index}
+                                    className="d-inline-block"
+                                    style={{
+                                      background: "#4a5568",
+                                      border: "2px dashed #718096",
+                                      borderRadius: "6px",
+                                      padding: "4px 16px",
+                                      margin: "0 4px",
+                                      minWidth: "120px",
+                                      textAlign: "center",
+                                      color: "#e2e8f0",
+                                      fontSize: "13px",
+                                      fontWeight: "500",
+                                      letterSpacing: "0.5px",
+                                      cursor: "pointer",
+                                      transition: "all 0.2s ease"
+                                    }}
+                                    onDrop={(e) => {
+                                      e.preventDefault();
+                                      const blockText = e.dataTransfer.getData("text/plain");
+                                      if (blockText) handleDrop(blankId, blockText);
+                                    }}
+                                    onDragOver={(e) => {
+                                      e.preventDefault();
+                                      e.currentTarget.style.background = "#5a6578";
+                                      e.currentTarget.style.borderColor = "#a0aec0";
+                                    }}
+                                    onDragLeave={(e) => {
+                                      e.currentTarget.style.background = "#4a5568";
+                                      e.currentTarget.style.borderColor = "#718096";
+                                    }}
+                                  >
+                                    {userAnswers[blankId] ? (
+                                      <>
+                                        <span style={{ color: "#90cdf4" }}>{userAnswers[blankId]}</span>
+                                        <button 
+                                          onClick={() => clearBlank(blankId)}
+                                          className="btn btn-sm ms-2"
+                                          style={{ 
+                                            fontSize: "12px", 
+                                            padding: "0 4px", 
+                                            border: "1px solid #718096", 
+                                            background: "#2d3748",
+                                            color: "#e2e8f0",
+                                            borderRadius: "3px",
+                                            lineHeight: "1"
+                                          }}
+                                        >
+                                          ×
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <span style={{ color: "#a0aec0", fontStyle: "italic" }}>BLANK</span>
+                                    )}
+                                  </span>
+                                );
+                              } 
+                              // 레벨 3-5: 직접 입력 필드
+                              else {
+                                return (
+                                  <input
+                                    key={index}
+                                    type="text"
+                                    className="d-inline-block"
+                                    value={userAnswers[blankId] || ""}
+                                    onChange={(e) => handleInputChange(blankId, e.target.value)}
+                                    placeholder={`빈칸 ${blankId}`}
+                                    style={{
+                                      background: "#4a5568",
+                                      border: "2px solid #718096",
+                                      borderRadius: "6px",
+                                      padding: "4px 12px",
+                                      margin: "0 4px",
+                                      minWidth: "100px",
+                                      maxWidth: "150px",
+                                      textAlign: "center",
+                                      color: "#90cdf4",
+                                      fontSize: "13px",
+                                      fontWeight: "500",
+                                      outline: "none",
+                                      fontFamily: "monospace"
+                                    }}
+                                    onFocus={(e) => {
+                                      e.currentTarget.style.borderColor = "#a0aec0";
+                                      e.currentTarget.style.background = "#5a6578";
+                                    }}
+                                    onBlur={(e) => {
+                                      e.currentTarget.style.borderColor = "#718096";
+                                      e.currentTarget.style.background = "#4a5568";
+                                    }}
+                                  />
+                                );
+                              }
                             }
                             return <SyntaxHighlight key={index} code={part} />;
                           })}
@@ -616,51 +672,55 @@ export default function SolvedPage() {
                     </div>
                   </div>
 
-                  {/* 2) 드래그할 블록들 */}
-                  <div className="p-4 bg-white">
-                    <h4 className="text-dark mb-3 fw-bold">2) 드래그할 블록들</h4>
-                    <div className="d-flex flex-wrap gap-2">
-                      {(problem.blocks || []).length > 0 ? (
-                        problem.blocks!.map((block) => (
-                          <div
-                            key={block.id}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData("text/plain", block.text);
-                            }}
-                            className="btn"
-                            style={{
-                              background: block.type === 'answer' 
-                                ? "linear-gradient(180deg, #EEF2FF 0%, #E0E7FF 100%)"
-                                : "linear-gradient(180deg, #FFF1F1 0%, #FFE5E5 100%)",
-                              border: block.type === 'answer' ? "2px solid #7C83FF" : "2px solid #FF6B6B",
-                              borderRadius: "12px",
-                              color: block.type === 'answer' ? "#1e1b4b" : "#7F1D1D",
-                              fontWeight: "600",
-                              cursor: "grab",
-                              userSelect: "none"
-                            }}
-                            onMouseDown={(e) => e.currentTarget.style.cursor = "grabbing"}
-                            onMouseUp={(e) => e.currentTarget.style.cursor = "grab"}
-                          >
-                            {block.text}
-                          </div>
-                        ))
-                      ) : (
-                        <span className="text-muted">블록이 없습니다.</span>
+                  {/* 2) 드래그할 블록들 (레벨 0-2만 표시) */}
+                  {uiLevel <= 2 && (
+                    <div className="p-4 bg-white">
+                      <h4 className="text-dark mb-3 fw-bold">2) 드래그할 블록들</h4>
+                      <div className="d-flex flex-wrap gap-2">
+                        {(problem.blocks || []).length > 0 ? (
+                          problem.blocks!.map((block) => (
+                            <div
+                              key={block.id}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData("text/plain", block.text);
+                              }}
+                              className="btn"
+                              style={{
+                                background: block.type === 'answer' 
+                                  ? "linear-gradient(180deg, #EEF2FF 0%, #E0E7FF 100%)"
+                                  : "linear-gradient(180deg, #FFF1F1 0%, #FFE5E5 100%)",
+                                border: block.type === 'answer' ? "2px solid #7C83FF" : "2px solid #FF6B6B",
+                                borderRadius: "12px",
+                                color: block.type === 'answer' ? "#1e1b4b" : "#7F1D1D",
+                                fontWeight: "600",
+                                cursor: "grab",
+                                userSelect: "none"
+                              }}
+                              onMouseDown={(e) => e.currentTarget.style.cursor = "grabbing"}
+                              onMouseUp={(e) => e.currentTarget.style.cursor = "grab"}
+                            >
+                              {block.text}
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-muted">블록이 없습니다.</span>
+                        )}
+                      </div>
+                      {(problem.blocks || []).length > 0 && (
+                        <div className="mt-2 text-muted small">
+                          정답 블록: {problem.blocks!.filter(b => b.type === 'answer').length}개 | 
+                          오답 블록: {problem.blocks!.filter(b => b.type === 'distractor').length}개
+                        </div>
                       )}
                     </div>
-                    {(problem.blocks || []).length > 0 && (
-                      <div className="mt-2 text-muted small">
-                        정답 블록: {problem.blocks!.filter(b => b.type === 'answer').length}개 | 
-                        오답 블록: {problem.blocks!.filter(b => b.type === 'distractor').length}개
-                      </div>
-                    )}
-                  </div>
+                  )}
 
-                  {/* 3) 제출하기 */}
+                  {/* 제출하기 */}
                   <div className="p-4 bg-light" style={{ borderTop: "1px solid #e9ecef" }}>
-                    <h4 className="text-dark mb-3 fw-bold">3) 제출하기</h4>
+                    <h4 className="text-dark mb-3 fw-bold">
+                      {uiLevel <= 2 ? '3)' : '2)'} 제출하기
+                    </h4>
                     <button
                       onClick={handleSubmit}
                       className="btn btn-primary btn-lg px-4 py-2"

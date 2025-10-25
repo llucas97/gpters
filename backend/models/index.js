@@ -30,7 +30,7 @@ db.Statistics = require('./statistics')(sequelize, DataTypes);
 db.ProblemBank = require('./problem_bank.model')(sequelize, Sequelize.DataTypes);
 db.StudySession = require('./study_session.model')(sequelize, Sequelize.DataTypes);
 db.UserExperience = require('./userExperience')(sequelize, Sequelize.DataTypes);
-db.ProblemEvaluation = require('./problemEvaluation');
+db.ProblemEvaluation = require('./problemEvaluation')(sequelize, Sequelize.DataTypes);
 
 // ✅ 모델 관계 설정
 if (db.User.associate) db.User.associate(db);

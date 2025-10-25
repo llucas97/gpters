@@ -1,7 +1,5 @@
-const { DataTypes } = require('sequelize');
-const db = require('../config/database');
-
-const ProblemEvaluation = db.define('problem_evaluations', {
+module.exports = (sequelize, DataTypes) => {
+  const ProblemEvaluation = sequelize.define('problem_evaluations', {
   evaluation_id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -59,5 +57,6 @@ const ProblemEvaluation = db.define('problem_evaluations', {
   ]
 });
 
-module.exports = ProblemEvaluation;
+return ProblemEvaluation;
+};
 

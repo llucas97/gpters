@@ -61,7 +61,7 @@ async function scrapeBaekjoonProblem(problemId) {
     
     if (!jsdom) {
       const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-      const title = titleMatch ? titleMatch[1].replace(/\s*-\s*백준\s*온라인\s*저지/i, '').trim() : '';
+      const title = titleMatch ? titleMatch[1].replace(/\s*-\s*백준\s*온라인\s*ㅖ지/i, '').trim() : '';
       
       return {
         title,
