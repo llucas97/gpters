@@ -204,6 +204,20 @@ type Problem = {
   blankCount?: number;
 };
 
+// 채점 결과 타입
+type GradingResult = {
+  isCorrect: boolean;
+  score: number;
+  totalBlanks: number;
+  correctBlanks: number;
+  details: Array<{
+    blankId: number;
+    userAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+  }>;
+};
+
 export default function SolvedPage() {
   const [uiLevel, setUiLevel] = useState<number>(2); // 0-5
   const [language, setLanguage] = useState<string>("javascript");
@@ -211,6 +225,10 @@ export default function SolvedPage() {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string>("");
+  
+  // 모달 관련 상태
+  const [showResultModal, setShowResultModal] = useState<boolean>(false);
+  const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
 
   // 문제 생성 함수 - 모든 레벨에서 드래그 앤 드롭 방식 사용
   const handleGenerateProblem = async () => {
@@ -302,11 +320,72 @@ export default function SolvedPage() {
         body: JSON.stringify(body),
       });
       if (!r.ok) throw new Error(await r.text());
-      const result = await r.json();
-      alert(JSON.stringify(result.data, null, 2));
+      
+      // TODO: API 연결 시 실제 채점 결과 사용
+      // const result = await r.json();
+      // const apiResult = result.data;
+      // setGradingResult(apiResult);
+      
+      // 현재는 임시로 프론트엔드에서 채점 (나중에 제거)
+      const mockGradingResult = generateMockGrading(problem, userAnswers);
+      setGradingResult(mockGradingResult);
+      setShowResultModal(true);
+      
     } catch (error: any) {
-      alert("제출 오류: " + (error?.message || error));
+      // API가 없을 때를 대비한 임시 채점
+      console.warn("API 호출 실패, 임시 채점 사용:", error);
+      const mockGradingResult = generateMockGrading(problem, userAnswers);
+      setGradingResult(mockGradingResult);
+      setShowResultModal(true);
     }
+  };
+  
+  // 임시 채점 함수 (나중에 API로 대체)
+  const generateMockGrading = (prob: Problem, answers: Record<number, string>): GradingResult => {
+    const blankCount = prob.blankCount || 1;
+    const correctAnswers = prob.blocks?.filter(b => b.type === 'answer').map(b => b.text) || [];
+    
+    const details = [];
+    let correctCount = 0;
+    
+    for (let i = 1; i <= blankCount; i++) {
+      const userAns = answers[i] || "";
+      const correctAns = correctAnswers[i - 1] || "정답 없음";
+      const isCorrect = userAns === correctAns;
+      
+      if (isCorrect) correctCount++;
+      
+      details.push({
+        blankId: i,
+        userAnswer: userAns,
+        correctAnswer: correctAns,
+        isCorrect
+      });
+    }
+    
+    const score = Math.round((correctCount / blankCount) * 100);
+    
+    return {
+      isCorrect: correctCount === blankCount,
+      score,
+      totalBlanks: blankCount,
+      correctBlanks: correctCount,
+      details
+    };
+  };
+  
+  // 다시 풀기
+  const handleRetry = () => {
+    setUserAnswers({});
+    setShowResultModal(false);
+    setGradingResult(null);
+  };
+  
+  // 새 문제 생성
+  const handleNewProblem = () => {
+    setShowResultModal(false);
+    setGradingResult(null);
+    handleGenerateProblem();
   };
 
   return (
@@ -602,6 +681,151 @@ export default function SolvedPage() {
           </div>
         </div>
       </div>
+
+      {/* 채점 결과 모달 */}
+      {showResultModal && gradingResult && (
+        <div 
+          className="modal show d-block" 
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowResultModal(false)}
+        >
+          <div 
+            className="modal-dialog modal-dialog-centered modal-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content" style={{ borderRadius: '20px', border: 'none', overflow: 'hidden' }}>
+              
+              {/* 모달 헤더 */}
+              <div 
+                className="modal-header border-0 p-4"
+                style={{
+                  background: gradingResult.isCorrect 
+                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                    : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                  color: 'white'
+                }}
+              >
+                <div className="w-100 text-center">
+                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>
+                    {gradingResult.isCorrect ? '🎉' : '💪'}
+                  </div>
+                  <h3 className="modal-title fw-bold mb-2">
+                    {gradingResult.isCorrect ? '정답입니다!' : '아쉽네요!'}
+                  </h3>
+                  <h1 className="display-3 fw-bold mb-0">
+                    {gradingResult.score}점
+                  </h1>
+                  <p className="mb-0 mt-2" style={{ fontSize: '1.1rem' }}>
+                    {gradingResult.correctBlanks} / {gradingResult.totalBlanks} 정답
+                  </p>
+                </div>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => setShowResultModal(false)}
+                  style={{ position: 'absolute', right: '1rem', top: '1rem' }}
+                ></button>
+              </div>
+
+              {/* 모달 바디 */}
+              <div className="modal-body p-4">
+                <h5 className="fw-bold mb-3 text-dark">상세 결과</h5>
+                
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead>
+                      <tr>
+                        <th className="text-center" style={{ width: '80px' }}>빈칸</th>
+                        <th className="text-center" style={{ width: '80px' }}>결과</th>
+                        <th>내 답안</th>
+                        <th>정답</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gradingResult.details.map((detail) => (
+                        <tr key={detail.blankId} className={detail.isCorrect ? 'table-success' : 'table-danger'}>
+                          <td className="text-center fw-bold">
+                            #{detail.blankId}
+                          </td>
+                          <td className="text-center">
+                            <span style={{ fontSize: '1.5rem' }}>
+                              {detail.isCorrect ? '✓' : '✗'}
+                            </span>
+                          </td>
+                          <td>
+                            <code 
+                              className="px-2 py-1 rounded"
+                              style={{
+                                background: detail.isCorrect ? '#d1e7dd' : '#f8d7da',
+                                color: detail.isCorrect ? '#0a3622' : '#58151c',
+                                fontFamily: 'monospace'
+                              }}
+                            >
+                              {detail.userAnswer || '(비어있음)'}
+                            </code>
+                          </td>
+                          <td>
+                            <code 
+                              className="px-2 py-1 rounded"
+                              style={{
+                                background: '#e7f1ff',
+                                color: '#004085',
+                                fontFamily: 'monospace'
+                              }}
+                            >
+                              {detail.correctAnswer}
+                            </code>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {!gradingResult.isCorrect && (
+                  <div className="alert alert-info mt-3" style={{ borderRadius: '12px' }}>
+                    <i className="bi bi-lightbulb-fill me-2"></i>
+                    <strong>힌트:</strong> 틀린 부분을 다시 한 번 확인해보세요!
+                  </div>
+                )}
+              </div>
+
+              {/* 모달 푸터 */}
+              <div className="modal-footer border-0 p-4 bg-light">
+                <button 
+                  className="btn btn-lg px-4"
+                  onClick={handleRetry}
+                  style={{
+                    background: 'white',
+                    border: '2px solid #667eea',
+                    color: '#667eea',
+                    borderRadius: '12px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <i className="bi bi-arrow-clockwise me-2"></i>
+                  다시 풀기
+                </button>
+                <button 
+                  className="btn btn-lg px-4"
+                  onClick={handleNewProblem}
+                  style={{
+                    background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                    border: 'none',
+                    color: 'white',
+                    borderRadius: '12px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <i className="bi bi-plus-circle me-2"></i>
+                  새 문제
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
