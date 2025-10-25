@@ -1,6 +1,7 @@
 import React from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import ExperienceDisplay from '../components/ExperienceDisplay'
 
 const DashboardPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth()
@@ -40,6 +41,16 @@ const DashboardPage: React.FC = () => {
               안녕하세요, {user?.username}님!
             </div>
           </div>
+        </div>
+
+        {/* 경험치 및 레벨 표시 */}
+        <div className="col-12 mb-4">
+          <ExperienceDisplay 
+            userId={user?.id} 
+            showStats={true} 
+            showRanking={true}
+            className="mb-4"
+          />
         </div>
 
         {/* 추천 문제 섹션 */}

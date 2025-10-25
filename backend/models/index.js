@@ -29,6 +29,8 @@ db.Statistics = require('./statistics')(sequelize, DataTypes);
 
 db.ProblemBank = require('./problem_bank.model')(sequelize, Sequelize.DataTypes);
 db.StudySession = require('./study_session.model')(sequelize, Sequelize.DataTypes);
+db.UserExperience = require('./userExperience')(sequelize, Sequelize.DataTypes);
+db.ProblemEvaluation = require('./problemEvaluation');
 
 // ✅ 모델 관계 설정
 if (db.User.associate) db.User.associate(db);
@@ -39,5 +41,6 @@ if (db.LevelTestResult.associate) db.LevelTestResult.associate(db);
 // ✅ 기존 스키마 모델들의 관계 설정
 if (db.Submission.associate) db.Submission.associate(db);
 if (db.Statistics.associate) db.Statistics.associate(db);
+if (db.UserExperience.associate) db.UserExperience.associate(db);
 
 module.exports = db;

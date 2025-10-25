@@ -65,7 +65,13 @@ const Navbar = () => {
                 <li className="nav-item">
                   <Link className="nav-link" to="/dashboard">
                     <i className="bi bi-graph-up me-1"></i>
-                    학습 통계
+                    학습 진도
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/stats">
+                    <i className="bi bi-bar-chart me-1"></i>
+                    통계 분석
                   </Link>
                 </li>
               </>

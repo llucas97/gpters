@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Editor, { OnMount, BeforeMount } from "@monaco-editor/react";
 import { useAuth } from "../contexts/AuthContext";
+import ExperienceService from "../services/experienceService";
+import ProblemEvaluationModal from "../components/ProblemEvaluationModal";
 
 // ===== client id =====
 const getClientId = (): string => {
@@ -28,6 +30,32 @@ const getClientId = (): string => {
 const CLIENT_ID = getClientId();
 
 // 사용하지 않는 헬퍼 함수들 제거됨
+
+// --- 경험치 추가 헬퍼 함수 ---
+const addExperienceFromProblem = async (userId: string, problemData: any, result: any) => {
+  try {
+    const experienceData = {
+      level: problemData.level || 0,
+      problemType: problemData.type || 'cloze',
+      score: result.score || 0,
+      isCorrect: result.is_correct || false,
+      isFirstAttempt: true, // TODO: 실제 첫 시도 여부 확인 로직 필요
+      timeSpent: result.duration_ms || 0
+    };
+
+    const expResult = await ExperienceService.addExperience(userId, experienceData);
+    
+    if (expResult.success && expResult.data.leveledUp) {
+      // 레벨업 알림 표시
+      alert(`🎉 레벨업! ${expResult.data.level}레벨 달성! +${expResult.data.gainedExperience} 경험치`);
+    } else if (expResult.success) {
+      // 경험치 획득 알림
+      console.log(`+${expResult.data.gainedExperience} 경험치 획득`);
+    }
+  } catch (error) {
+    console.error('경험치 추가 오류:', error);
+  }
+};
 
 // --- 공통 유틸 (파일 상단에) ---
 
@@ -143,6 +171,10 @@ export default function SolvePage() {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [err, setErr] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
+  
+  // 평가 모달 상태
+  const [showEvaluationModal, setShowEvaluationModal] = useState<boolean>(false);
+  const [lastSolvedProblemId, setLastSolvedProblemId] = useState<number | null>(null);
 
   // 클로즈/블록 공통
   const orderedBlanks = useMemo<Blank[]>(() => {
@@ -217,6 +249,19 @@ export default function SolvePage() {
   return (
     <div className="max-w-5xl mx-auto p-4">
       <h1 className="text-2xl font-bold">레벨별 문제 해결</h1>
+      
+      {/* 평가 모달 */}
+      {user && lastSolvedProblemId && (
+        <ProblemEvaluationModal
+          isOpen={showEvaluationModal}
+          onClose={() => setShowEvaluationModal(false)}
+          problemId={lastSolvedProblemId}
+          userId={user.id}
+          onSubmitSuccess={() => {
+            console.log('평가/신고 제출 완료');
+          }}
+        />
+      )}
 
       {/* 상단 컨트롤 */}
       <div className="mt-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
@@ -309,6 +354,10 @@ export default function SolvePage() {
             <BlockCodingPanel
               problem={problem}
               CLIENT_ID={CLIENT_ID}
+              onSubmitSuccess={(problemId: number) => {
+                setLastSolvedProblemId(problemId);
+                setShowEvaluationModal(true);
+              }}
             />
           )}
 
@@ -318,12 +367,23 @@ export default function SolvePage() {
               problem={problem}
               orderedBlanks={orderedBlanks}
               CLIENT_ID={CLIENT_ID}
+              onSubmitSuccess={(problemId: number) => {
+                setLastSolvedProblemId(problemId);
+                setShowEvaluationModal(true);
+              }}
             />
           )}
 
           {/* 4-5: 코드 에디터(3스택: 문제 → 에디터 → 제출) */}
           {problem && uiLevel >= 4 && (
-            <CodeEditorPanel problem={problem} CLIENT_ID={CLIENT_ID} />
+            <CodeEditorPanel 
+              problem={problem} 
+              CLIENT_ID={CLIENT_ID}
+              onSubmitSuccess={(problemId: number) => {
+                setLastSolvedProblemId(problemId);
+                setShowEvaluationModal(true);
+              }}
+            />
           )}
         </div>
       )}
@@ -415,22 +475,32 @@ function DropSlot({
     const t = e.dataTransfer.getData("text/plain");
     if (t) onDropToken(id, t);
   };
+  
   return (
     <span
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
-      style={styles.blankChip}
-      title={`빈칸 ${id}`}
+      style={{
+        ...styles.blankChip,
+        border: value ? '2px solid #10b981' : '2px solid #facc15',
+        background: value ? '#065f46' : '#374151',
+        cursor: 'pointer'
+      }}
+      title={value ? `빈칸 ${id}: ${value}` : `빈칸 ${id} - 블록을 드래그하세요`}
     >
       {value ? (
         <>
-          {value}
-          <button onClick={() => onClear(id)} className="ml-1 text-[10px]">
+          <span className="text-green-300 font-semibold">{value}</span>
+          <button 
+            onClick={() => onClear(id)} 
+            className="ml-1 text-[10px] hover:bg-red-500 hover:text-white rounded px-1"
+            title="제거"
+          >
             ×
           </button>
         </>
       ) : (
-        "BLANK"
+        <span className="text-yellow-300">BLANK_{id}</span>
       )}
     </span>
   );
@@ -461,9 +531,15 @@ function InputSlot({
           border: "none",
         }}
         placeholder="입력..."
+        autoComplete="off"
+        spellCheck={false}
       />
-      {value ? (
-        <button onClick={() => onClear(id)} className="ml-1 text-[10px]">
+      {value && value.trim() ? (
+        <button 
+          onClick={() => onClear(id)} 
+          className="ml-1 text-[10px] hover:bg-red-500 hover:text-white rounded px-1"
+          title="지우기"
+        >
           ×
         </button>
       ) : null}
@@ -475,10 +551,13 @@ function InputSlot({
 function BlockCodingPanel({
   problem,
   CLIENT_ID,
+  onSubmitSuccess,
 }: {
   problem: any;
   CLIENT_ID: string;
+  onSubmitSuccess?: (problemId: number) => void;
 }) {
+  const { user } = useAuth();
   // 새로운 블록코딩 문제 구조 사용
   const blankedCode = problem.blankedCode || "";
   const blocks = problem.blocks || [];
@@ -519,21 +598,54 @@ function BlockCodingPanel({
     }));
     if (blanks_user.some((x: any) => !x.value) && !confirm("빈칸이 비어 있습니다. 제출할까요?")) return;
 
-    const body = {
-      mode: "cloze",
-      client_id: CLIENT_ID,
-      problem_id: problem.id,
-      blanks_user
-    };
-
-    const r = await fetch("/api/solve/grade", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-    const data = await r.json();
-    // data.accuracy, data.feedback, data.blanks_total 등으로 결과 표시
-    alert(data.ok === false ? `오류: ${data.error || '채점 실패'}` : `정답률: ${data.accuracy}%`);
+    try {
+      // 블록코딩 전용 검증 API 사용
+      const response = await fetch("/api/block-coding/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problem: problem,
+          userAnswers: blanks_user.map(b => b.value)
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        const { score, results } = data.data;
+        let message = `점수: ${score}점\n`;
+        message += results.map((r: any) => 
+          `빈칸 ${r.blankIndex}: ${r.isCorrect ? '✅' : '❌'} (정답: ${r.correctAnswer})`
+        ).join('\n');
+        
+        alert(message);
+        
+        // 경험치 추가
+        if (user?.id) {
+          const problemData = {
+            level: problem?.level || 0,
+            type: 'block',
+            score: score,
+            is_correct: score > 0,
+            duration_ms: 0 // TODO: 실제 소요 시간 계산
+          };
+          await addExperienceFromProblem(user.id, problemData, { score, is_correct: score > 0 });
+        }
+        
+        // 제출 성공 시 평가 모달 표시
+        if (problem?.id && score > 0) {
+          onSubmitSuccess?.(problem.id);
+        }
+      } else {
+        alert(`오류: ${data.error || '채점 실패'}`);
+      }
+    } catch (error: any) {
+      alert("제출 오류: " + (error?.message || error));
+    }
   };
 
   // 블랭크가 포함된 코드를 렌더링하는 함수
@@ -620,10 +732,13 @@ function BlockCodingPanel({
 function CodeEditorPanel({
   problem,
   CLIENT_ID,
+  onSubmitSuccess,
 }: {
   problem: any;
   CLIENT_ID: string;
+  onSubmitSuccess?: (problemId: number) => void;
 }) {
+  const { user } = useAuth();
   const [code, setCode] = useState<string>("");
   const [validationResult, setValidationResult] = useState<any>(null);
   const [isValidating, setIsValidating] = useState<boolean>(false);
@@ -809,8 +924,37 @@ function CodeEditorPanel({
         } else {
           alert(`❌ 일부 테스트 케이스가 실패했습니다.\n통과: ${result.validation.passedCount}/${result.validation.totalCount}\n점수: ${result.validation.score}점`);
         }
+        
+        // 경험치 추가
+        if (user?.id) {
+          const problemData = {
+            level: problem?.level || 0,
+            type: 'code_editor',
+            score: result.validation.score || 0,
+            is_correct: result.validation.allPassed || false,
+            duration_ms: 0 // TODO: 실제 소요 시간 계산
+          };
+          await addExperienceFromProblem(user.id, problemData, result.validation);
+        }
+        
+        // 제출 성공 시 평가 모달 표시
+        if (problem?.id && result.validation.score > 0) {
+          onSubmitSuccess?.(problem.id);
+        }
       } catch (error: any) {
+        console.error('코드 검증 오류:', error);
         alert("코드 검증 오류: " + (error?.message || error));
+        setValidationResult({
+          allPassed: false,
+          passedCount: 0,
+          totalCount: 0,
+          score: 0,
+          results: [{
+            testCase: '오류',
+            passed: false,
+            error: error?.message || '알 수 없는 오류'
+          }]
+        });
       } finally {
         setIsValidating(false);
       }
@@ -835,6 +979,7 @@ function CodeEditorPanel({
         const j = await r.json();
         alert(JSON.stringify(j, null, 2));
       } catch (error: any) {
+        console.error('제출 오류:', error);
         alert("제출 오류: " + (error?.message || error));
       }
     }
@@ -933,11 +1078,14 @@ function ClozePanel({
   problem,
   orderedBlanks,
   CLIENT_ID,
+  onSubmitSuccess,
 }: {
   problem: any;
   orderedBlanks: any[];
   CLIENT_ID: string;
+  onSubmitSuccess?: (problemId: number) => void;
 }) {
+  const { user } = useAuth();
   const segs = useMemo(
     () => parseClozeSegments(problem.code || ""),
     [problem?.code]
@@ -964,28 +1112,74 @@ function ClozePanel({
       id: Number(String(b.id).replace(/\D/g, "")),
       value: filled[Number(String(b.id).replace(/\D/g, ""))] ?? "",
     }));
-    if (
-      blanks_user.some((x) => !x.value) &&
-      !confirm("빈칸이 비어 있습니다. 제출할까요?")
-    )
-      return;
-    const body = {
-      mode: "cloze",
-      client_id: CLIENT_ID,
-      problem_id: problem.id,
-      blanks_user,
-      started_at: new Date().toISOString(),
-      finished_at: new Date().toISOString(),
-    };
+    
+    const emptyBlanks = blanks_user.filter(x => !x.value);
+    if (emptyBlanks.length > 0) {
+      const confirmSubmit = confirm(
+        `빈칸이 비어 있습니다 (${emptyBlanks.length}개). 제출할까요?`
+      );
+      if (!confirmSubmit) return;
+    }
+    
     try {
+      const body = {
+        mode: "cloze",
+        client_id: CLIENT_ID,
+        problem_id: problem.id,
+        blanks_user,
+        started_at: new Date().toISOString(),
+        finished_at: new Date().toISOString(),
+      };
+      
       const r = await fetch("/api/solve/grade", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!r.ok) throw new Error(await r.text());
-      alert(JSON.stringify(await r.json(), null, 2));
+      
+      if (!r.ok) {
+        const errorText = await r.text();
+        throw new Error(`서버 오류 (${r.status}): ${errorText}`);
+      }
+      
+      const result = await r.json();
+      
+      if (result.ok) {
+        let message = `🎯 채점 결과\n`;
+        message += `정답률: ${result.accuracy}% (${result.blanks_correct}/${result.blanks_total})\n\n`;
+        
+        // 개별 결과 표시
+        if (result.feedback) {
+          message += `📝 상세 결과:\n`;
+          Object.entries(result.feedback).forEach(([key, feedback]: [string, any]) => {
+            const status = feedback.correct ? '✅' : '❌';
+            message += `빈칸 ${key}: ${status} (입력: "${feedback.user}", 정답: "${feedback.answer}")\n`;
+          });
+        }
+        
+        alert(message);
+        
+        // 경험치 추가
+        if (user?.id) {
+          const problemData = {
+            level: problem?.level || 0,
+            type: 'cloze',
+            score: result.score || 0,
+            is_correct: result.is_correct || false,
+            duration_ms: 0 // TODO: 실제 소요 시간 계산
+          };
+          await addExperienceFromProblem(user.id, problemData, result);
+        }
+        
+        // 제출 성공 시 평가 모달 표시
+        if (problem?.id && result.score > 0) {
+          onSubmitSuccess?.(problem.id);
+        }
+      } else {
+        alert(`오류: ${result.error || '채점 실패'}`);
+      }
     } catch (error: any) {
+      console.error('제출 오류:', error);
       alert("제출 오류: " + (error?.message || error));
     }
   };
