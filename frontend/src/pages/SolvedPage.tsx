@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { getCurrentUser } from "../api/auth";
 import GradingService from "../services/gradingService";
 
 // ===== client id ===== (Not used in current implementation)
@@ -207,6 +208,7 @@ type Problem = {
     type: 'answer' | 'distractor';
   }>;
   blankCount?: number;
+  keywordsToBlank?: string[]; // 빈칸 채우기용 정답 키워드 배열
 };
 
 // 채점 결과 타입
@@ -215,6 +217,7 @@ type GradingResult = {
   score: number;
   totalBlanks: number;
   correctBlanks: number;
+  experience?: number;
   details: Array<{
     blankId: number;
     userAnswer: string;
@@ -224,14 +227,16 @@ type GradingResult = {
 };
 
 export default function SolvedPage() {
-  const { user } = useAuth(); // 사용자 정보 가져오기
-  const [uiLevel, setUiLevel] = useState<number>(2); // 0-5
+  const { user, updateUser } = useAuth(); // 사용자 정보 가져오기
+  
+  const [uiLevel, setUiLevel] = useState<number>(2); // 기본값 2
   const [language, setLanguage] = useState<string>("javascript");
   const [loading, setLoading] = useState<boolean>(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string>("");
   const [startTime, setStartTime] = useState<number>(0); // 문제 시작 시간
+  const [showHints, setShowHints] = useState<boolean>(false); // 힌트 표시 여부
   
   // 모달 관련 상태
   const [showResultModal, setShowResultModal] = useState<boolean>(false);
@@ -239,19 +244,57 @@ export default function SolvedPage() {
 
   // 사용자 레벨에 맞춰 UI Level 자동 설정
   useEffect(() => {
-    if (user?.current_level !== undefined && user?.current_level !== null) {
+    const fetchUserLevel = async () => {
+      console.log('[SolvedPage] useEffect 실행 - user:', user);
+      console.log('[SolvedPage] user.current_level:', user?.current_level);
+      
+      // 먼저 localStorage의 user 정보 확인
+      let userLevel = user?.current_level;
+      
+      // user가 있지만 current_level이 없거나, 서버에서 최신 정보 가져오기
+      if (user?.id) {
+        try {
+          const userInfo = await getCurrentUser();
+          console.log('[SolvedPage] 서버에서 가져온 사용자 정보:', userInfo);
+          
+          // getCurrentUser는 직접 사용자 정보를 반환 (user 객체 없이)
+          if (userInfo && userInfo.current_level !== undefined && userInfo.current_level !== null) {
+            userLevel = userInfo.current_level;
+            console.log('[SolvedPage] 서버에서 가져온 레벨:', userLevel);
+            // Context 업데이트 (레벨이 변경된 경우)
+            if (userLevel !== user?.current_level) {
+              console.log(`[SolvedPage] 레벨 업데이트: ${user?.current_level} → ${userLevel}`);
+              updateUser({ current_level: userLevel });
+            }
+          }
+        } catch (error) {
+          console.error('[SolvedPage] 사용자 정보 가져오기 실패:', error);
+        }
+      }
+      
       // 사용자 레벨을 0-5 범위로 제한
-      const userLevel = Math.max(0, Math.min(5, user.current_level));
-      setUiLevel(userLevel);
-      console.log(`사용자 레벨 ${user.current_level}에 맞춰 UI Level을 ${userLevel}로 설정`);
-    }
-  }, [user?.current_level]);
+      if (userLevel !== undefined && userLevel !== null) {
+        const validLevel = Math.max(0, Math.min(5, userLevel));
+        console.log(`[SolvedPage] UI Level을 ${validLevel}로 설정합니다 (원래 레벨: ${userLevel})`);
+        setUiLevel(validLevel);
+      } else {
+        console.log('[SolvedPage] 사용자 레벨 정보가 없습니다. 기본값 2 유지');
+        setUiLevel(2);
+      }
+    };
+    
+    fetchUserLevel();
+  }, [user]);
 
   // 문제 생성 함수 - 모든 레벨에서 블록코딩 API 사용, UI만 다르게
   const handleGenerateProblem = async () => {
     try {
-      setLoading(true);
+      // 문제 생성 시 즉시 기존 문제 숨기기
+      setProblem(null);
+      setUserAnswers({});
       setErr("");
+      setLoading(true);
+      
       const topics = ["graph", "dp", "greedy", "tree", "string", "math"];
       const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
@@ -280,8 +323,8 @@ export default function SolvedPage() {
       const problemData: Problem = response.data;
       
       setProblem(problemData);
-      setUserAnswers({});
       setStartTime(Date.now()); // 문제 시작 시간 기록
+      setShowHints(false); // 새 문제 생성 시 힌트 숨김
       
     } catch (error: any) {
       setErr(String(error?.message || error));
@@ -320,17 +363,49 @@ export default function SolvedPage() {
   const handleSubmit = async () => {
     if (!problem) return;
     
-    const blankCount = problem.blankCount || problem.blanks?.length || 1;
+    // 문제에서 실제 빈칸 개수 확인
+    const blankedCode = problem.blankedCode || problem.templateCode || problem.code || "";
+    const blankMatches = blankedCode.match(/BLANK_\d+/g) || [];
+    const blankIds = [...new Set(blankMatches.map(m => parseInt(m.replace('BLANK_', ''))))].sort((a, b) => a - b);
+    const blankCount = blankIds.length || problem.blankCount || problem.blanks?.length || problem.keywordsToBlank?.length || 1;
+    
+    // 빈칸 번호 순서대로 답안 배열 생성
     const userAnswersArray: string[] = [];
     
-    for (let i = 1; i <= blankCount; i++) {
-      userAnswersArray.push(userAnswers[i] || "");
+    // keywordsToBlank나 solutions가 있으면 그것을 기준으로, 없으면 blankIds 사용
+    if (problem.keywordsToBlank && Array.isArray(problem.keywordsToBlank)) {
+      // keywordsToBlank의 길이를 기준으로
+      for (let i = 1; i <= problem.keywordsToBlank.length; i++) {
+        userAnswersArray.push((userAnswers[i] || "").trim());
+      }
+    } else if (problem.solutions && Array.isArray(problem.solutions)) {
+      // solutions의 길이를 기준으로
+      for (let i = 1; i <= problem.solutions.length; i++) {
+        userAnswersArray.push((userAnswers[i] || "").trim());
+      }
+    } else {
+      // blankIds를 기준으로
+      for (let i = 0; i < blankIds.length; i++) {
+        const blankId = blankIds[i];
+        userAnswersArray.push((userAnswers[blankId] || "").trim());
+      }
     }
     
-    if (
-      userAnswersArray.some((answer) => !answer) &&
-      !confirm("빈칸이 비어 있습니다. 제출할까요?")
-    ) {
+    // 빈칸 개수와 답안 배열 길이가 일치하지 않으면 조정
+    if (userAnswersArray.length !== blankCount) {
+      console.warn(`[SolvedPage] 답안 배열 길이 불일치: ${userAnswersArray.length} != ${blankCount}. 조정합니다.`);
+      while (userAnswersArray.length < blankCount) {
+        userAnswersArray.push("");
+      }
+      if (userAnswersArray.length > blankCount) {
+        userAnswersArray.splice(blankCount);
+      }
+    }
+    
+    // 빈 답안 확인 (빈 문자열 체크)
+    const emptyAnswers = userAnswersArray.filter(answer => !answer || answer.trim() === "");
+    if (emptyAnswers.length > 0 && 
+        !confirm(`${emptyAnswers.length}개의 빈칸이 비어 있습니다. 제출할까요?`)) {
       return;
     }
     
@@ -339,20 +414,35 @@ export default function SolvedPage() {
       const userId = user?.id?.toString();
       const timeSpent = startTime > 0 ? Math.floor((Date.now() - startTime) / 1000) : 0; // 초 단위
       
+      const currentLevel = problem.level || uiLevel;
+      const isBlockCoding = currentLevel <= 2; // 레벨 0-2는 블록코딩
+      
       console.log('[SolvedPage] 채점 제출:', {
         userId,
         problemTitle: problem.title,
+        level: currentLevel,
+        problemType: isBlockCoding ? 'block' : 'cloze',
         userAnswersCount: userAnswersArray.length,
         timeSpent: `${timeSpent}초`
       });
       
-      const result: any = await GradingService.gradeClozeTest(
-        problem,
-        userAnswersArray,
-        problem.level || uiLevel,
-        userId,
-        timeSpent
-      );
+      // 레벨에 따라 적절한 채점 함수 사용
+      // 레벨 0-2: 블록코딩, 레벨 3-5: 빈칸채우기
+      const result: any = isBlockCoding
+        ? await GradingService.gradeBlockCoding(
+            problem,
+            userAnswersArray, // 블록코딩에서는 userBlocks 배열로 전달
+            currentLevel,
+            userId,
+            timeSpent
+          )
+        : await GradingService.gradeClozeTest(
+            problem,
+            userAnswersArray,
+            currentLevel,
+            userId,
+            timeSpent
+          );
       
       if (result.success) {
         // API 응답을 GradingResult 형식으로 변환
@@ -361,6 +451,7 @@ export default function SolvedPage() {
           score: result.score,
           totalBlanks: result.totalCount || blankCount,
           correctBlanks: result.correctCount || 0,
+          experience: result.experience?.gained || 0,
           details: (result.results || []).map((r: any, idx: number) => ({
             blankId: idx + 1,
             userAnswer: userAnswersArray[idx] || "",
@@ -392,6 +483,7 @@ export default function SolvedPage() {
     setUserAnswers({});
     setShowResultModal(false);
     setGradingResult(null);
+    setShowHints(false); // 다시 풀기 시 힌트 숨김
   };
   
   // 새 문제 생성
@@ -543,7 +635,35 @@ export default function SolvedPage() {
                   
                   {/* 문제 전문 */}
                   <div className="p-4">
-                    <h3 className="text-dark mb-3 fw-bold">문제 전문</h3>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <h3 className="text-dark mb-0 fw-bold">문제 전문</h3>
+                      {/* 힌트 토글 버튼 */}
+                      <button
+                        className="btn btn-sm"
+                        onClick={() => setShowHints(!showHints)}
+                        style={{
+                          background: showHints ? "linear-gradient(45deg, #f093fb, #f5576c)" : "linear-gradient(45deg, #667eea, #764ba2)",
+                          border: "none",
+                          borderRadius: "10px",
+                          color: "white",
+                          fontWeight: "600",
+                          padding: "0.4rem 1rem",
+                          transition: "all 0.3s ease",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                          e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+                        }}
+                      >
+                        <i className={`bi ${showHints ? 'bi-lightbulb-fill' : 'bi-lightbulb'} me-2`}></i>
+                        {showHints ? '힌트 숨기기' : '힌트 보기'}
+                      </button>
+                    </div>
                     <div className="bg-white rounded p-3" style={{ borderRadius: "15px" }}>
                       <h5 className="fw-bold mb-2 text-dark">[{problem.title}]</h5>
                       <p className="text-dark mb-2">
@@ -554,9 +674,59 @@ export default function SolvedPage() {
                       )}
                       <div className="mt-2">
                         <span className="badge bg-danger me-2">레벨 {problem.level || uiLevel}</span>
+                        {problem.topic && (
+                          <span className="badge bg-info me-2">
+                            {problem.topic === 'graph' ? '그래프' :
+                             problem.topic === 'dp' ? '동적계획법' :
+                             problem.topic === 'greedy' ? '그리디' :
+                             problem.topic === 'tree' ? '트리' :
+                             problem.topic === 'string' ? '문자열' :
+                             problem.topic === 'math' ? '수학' :
+                             problem.topic}
+                          </span>
+                        )}
                         <span className="badge bg-primary">언어: {problem.language || language}</span>
                       </div>
                     </div>
+                    
+                    {/* 힌트 표시 영역 */}
+                    {showHints && (
+                      <div className="mt-3 p-3 rounded" style={{ 
+                        background: "linear-gradient(135deg, #FFF9E6 0%, #FFF3CC 100%)",
+                        border: "2px solid #FFD700",
+                        borderRadius: "15px"
+                      }}>
+                        <h6 className="fw-bold mb-2" style={{ color: "#B8860B" }}>
+                          <i className="bi bi-lightbulb-fill me-2"></i>
+                          힌트
+                        </h6>
+                        {problem.blanks && problem.blanks.length > 0 && problem.blanks.some(b => b.hint) ? (
+                          <div className="ms-3">
+                            {problem.blanks.map((blank, idx) => 
+                              blank.hint ? (
+                                <div key={idx} className="mb-2">
+                                  <span className="badge bg-warning text-dark me-2">빈칸 {idx + 1}</span>
+                                  <span style={{ color: "#6B5504" }}>{blank.hint}</span>
+                                </div>
+                              ) : null
+                            )}
+                          </div>
+                        ) : problem.solutions && problem.solutions.length > 0 && problem.solutions.some(s => s.hint) ? (
+                          <div className="ms-3">
+                            {problem.solutions.map((solution, idx) => 
+                              solution.hint ? (
+                                <div key={idx} className="mb-2">
+                                  <span className="badge bg-warning text-dark me-2">힌트 {idx + 1}</span>
+                                  <span style={{ color: "#6B5504" }}>{solution.hint}</span>
+                                </div>
+                              ) : null
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-muted mb-0 ms-3">이 문제에는 힌트가 제공되지 않습니다.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* 1) 코드에 빈칸 채우기 */}
@@ -694,12 +864,10 @@ export default function SolvedPage() {
                               }}
                               className="btn"
                               style={{
-                                background: block.type === 'answer' 
-                                  ? "linear-gradient(180deg, #EEF2FF 0%, #E0E7FF 100%)"
-                                  : "linear-gradient(180deg, #FFF1F1 0%, #FFE5E5 100%)",
-                                border: block.type === 'answer' ? "2px solid #7C83FF" : "2px solid #FF6B6B",
+                                background: "linear-gradient(180deg, #EEF2FF 0%, #E0E7FF 100%)",
+                                border: "2px solid #7C83FF",
                                 borderRadius: "12px",
-                                color: block.type === 'answer' ? "#1e1b4b" : "#7F1D1D",
+                                color: "#1e1b4b",
                                 fontWeight: "600",
                                 cursor: "grab",
                                 userSelect: "none"
@@ -785,6 +953,18 @@ export default function SolvedPage() {
                   <p className="mb-0 mt-2" style={{ fontSize: '1.1rem' }}>
                     {gradingResult.correctBlanks} / {gradingResult.totalBlanks} 정답
                   </p>
+                  {gradingResult.experience && gradingResult.experience > 0 && (
+                    <p className="mb-0 mt-3" style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
+                      <span style={{ 
+                        background: 'rgba(255, 255, 255, 0.3)', 
+                        padding: '0.5rem 1rem', 
+                        borderRadius: '20px',
+                        display: 'inline-block'
+                      }}>
+                        ✨ +{gradingResult.experience} EXP
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <button 
                   type="button" 
