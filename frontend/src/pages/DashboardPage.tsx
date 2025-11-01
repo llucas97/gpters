@@ -36,9 +36,6 @@ const DashboardPage: React.FC = () => {
         <div className="col-12">
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h1>💡 문제 풀이</h1>
-            <div className="text-muted">
-              안녕하세요, {user?.username}님!
-            </div>
           </div>
         </div>
 

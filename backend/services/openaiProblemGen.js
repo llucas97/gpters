@@ -6,6 +6,11 @@ if (!global.fetch) {
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL   = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
+// 디버깅: 환경 변수 확인
+console.log('🔍 OPENAI_API_KEY 확인:', OPENAI_API_KEY ? 'Found' : 'Missing');
+console.log('🔍 OPENAI_API_KEY 길이:', OPENAI_API_KEY ? OPENAI_API_KEY.length : 0);
+console.log('🔍 모든 환경 변수:', Object.keys(process.env).filter(key => key.includes('OPENAI')));
+
 // Cloze 전용 유틸리티 함수들 import
 const { 
   enforceLevel0Shape, 
@@ -137,6 +142,8 @@ function userPayload({ level, topic, language }) {
 }
 
 async function generateProblem({ level = 10, topic = 'graph', language = 'python', recentTitles = [], problemType = 'cloze' }) {
+  // 함수 호출 시점에 환경 변수 다시 확인
+  console.log('🔍 generateProblem 호출 시점 API 키 확인:', OPENAI_API_KEY ? 'Found' : 'Missing');
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing');
 
   // 레벨 0~1은 블록코딩 문제로 생성
