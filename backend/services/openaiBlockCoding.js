@@ -226,25 +226,121 @@ function generateDistractors(correctAnswers, language, count = 3) {
 
 /**
  * 정답 코드를 블랭크가 포함된 코드로 변환
+ * 각 키워드가 여러 번 나타나면 랜덤하게 하나만 블랭크로 처리
+ * 반환값: { blankedCode, blankMappings } - 블랭크 코드와 키워드 매핑 정보
  */
 function createBlankedCode(originalCode, keywordsToBlank) {
-  let blankedCode = originalCode;
+  // 원본 코드를 기반으로 모든 키워드의 위치를 먼저 찾기
+  const allKeywordPositions = new Map(); // keyword -> [positions]
   
-  keywordsToBlank.forEach((keyword, index) => {
-    const placeholder = `BLANK_${index + 1}`;
-    // 특수문자를 이스케이프 처리
-    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    
-    // 특수문자(+,-,*,/,=)는 단어 경계 없이 매칭, 일반 키워드는 단어 경계 사용
-    const isSpecialChar = /^[+\-*/=]$/.test(keyword);
-    const regex = isSpecialChar 
-      ? new RegExp(escapedKeyword, 'g')
-      : new RegExp(`\\b${escapedKeyword}\\b`, 'g');
-    
-    blankedCode = blankedCode.replace(regex, placeholder);
+  keywordsToBlank.forEach((keyword) => {
+    if (!allKeywordPositions.has(keyword)) {
+      const positions = [];
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const isSpecialChar = /^[+\-*/=]$/.test(keyword);
+      const regex = isSpecialChar 
+        ? new RegExp(escapedKeyword, 'g')
+        : new RegExp(`\\b${escapedKeyword}\\b`, 'g');
+      
+      let match;
+      // 원본 코드에서 모든 매칭 찾기 (lastIndex 초기화를 위해 새 RegExp 사용)
+      const regexCopy = isSpecialChar
+        ? new RegExp(escapedKeyword, 'g')
+        : new RegExp(`\\b${escapedKeyword}\\b`, 'g');
+      
+      while ((match = regexCopy.exec(originalCode)) !== null) {
+        positions.push({
+          index: match.index,
+          length: match[0].length,
+          keyword: keyword
+        });
+      }
+      
+      allKeywordPositions.set(keyword, positions);
+      console.log(`[createBlankedCode] 키워드 "${keyword}": ${positions.length}개 발견`, positions);
+    }
   });
   
-  return blankedCode;
+  // 각 키워드에 대해 랜덤으로 하나의 위치 선택
+  const selectedPositions = [];
+  keywordsToBlank.forEach((keyword, index) => {
+    const positions = allKeywordPositions.get(keyword) || [];
+    
+    if (positions.length === 0) {
+      console.warn(`[createBlankedCode] 키워드 "${keyword}"가 코드에서 찾을 수 없습니다.`);
+      return;
+    }
+    
+    // 랜덤하게 하나 선택
+    const randomIndex = Math.floor(Math.random() * positions.length);
+    const selectedPosition = {
+      ...positions[randomIndex],
+      blankId: index + 1,
+      keyword: keyword
+    };
+    
+    console.log(`[createBlankedCode] BLANK_${index + 1} 선택: 키워드 "${keyword}" (${positions.length}개 중 ${randomIndex + 1}번째, 위치: ${selectedPosition.index})`);
+    
+    selectedPositions.push(selectedPosition);
+  });
+  
+  // 위치 순서대로 정렬 (뒤에서부터 교체하여 인덱스 변경 방지)
+  selectedPositions.sort((a, b) => b.index - a.index);
+  
+  // 뒤에서부터 교체하여 인덱스 변경 영향을 받지 않도록 처리
+  let blankedCode = originalCode;
+  const blankMappings = [];
+  
+  selectedPositions.forEach((position) => {
+    const placeholder = `BLANK_${position.blankId}`;
+    
+    // 뒤에서부터 교체
+    blankedCode = 
+      blankedCode.slice(0, position.index) + 
+      placeholder + 
+      blankedCode.slice(position.index + position.length);
+    
+    // 매핑 정보 저장 (빈칸 ID 순서대로)
+    blankMappings.push({
+      blankId: position.blankId,
+      keyword: position.keyword,
+      originalIndex: position.index,
+      originalLength: position.length,
+      placeholder: placeholder
+    });
+  });
+  
+  // blankMappings를 blankId 순서대로 정렬
+  blankMappings.sort((a, b) => a.blankId - b.blankId);
+  
+  // 최종 매핑 검증 로그
+  console.log('[createBlankedCode] 최종 blankMappings:', blankMappings.map(m => ({
+    blankId: m.blankId,
+    keyword: m.keyword,
+    originalIndex: m.originalIndex
+  })));
+  console.log('[createBlankedCode] keywordsToBlank 배열:', keywordsToBlank);
+  
+  // 검증: blankMappings와 keywordsToBlank가 일치하는지 확인
+  const mappingMatch = blankMappings.every((mapping, idx) => {
+    const expectedKeyword = keywordsToBlank[idx];
+    const actualKeyword = mapping.keyword;
+    const match = expectedKeyword === actualKeyword;
+    if (!match) {
+      console.error(`[createBlankedCode] 매핑 불일치! BLANK_${mapping.blankId}: keywordsToBlank[${idx}]="${expectedKeyword}" != blankMappings.keyword="${actualKeyword}"`);
+    }
+    return match;
+  });
+  
+  if (!mappingMatch) {
+    console.error('[createBlankedCode] ⚠️ 경고: blankMappings와 keywordsToBlank가 일치하지 않습니다!');
+  }
+  
+  return { 
+    blankedCode, 
+    blankMappings, // BLANK_ID -> keyword 매핑 정보 (채점 시 사용)
+    keywordsToBlank // 정답 배열 (BLANK_1, BLANK_2, ... 순서대로)
+  };
 }
 
 /**
@@ -435,9 +531,12 @@ async function generateBlockCodingProblem({ level = 0, topic = 'basic', language
       }
     }
 
-    // 4. 블랭크가 포함된 코드 생성
-    const blankedCode = createBlankedCode(completeCode, keywordsToBlank);
+    // 4. 블랭크가 포함된 코드 생성 (매핑 정보 포함)
+    const blankResult = createBlankedCode(completeCode, keywordsToBlank);
+    const blankedCode = blankResult.blankedCode;
+    const blankMappings = blankResult.blankMappings;
     console.log('Blanked code:', blankedCode);
+    console.log('Blank mappings:', blankMappings);
 
     // 5. 블록 데이터 생성 (정답 + 오답)
     const blocks = createBlockData(keywordsToBlank, language);
@@ -446,7 +545,7 @@ async function generateBlockCodingProblem({ level = 0, topic = 'basic', language
     // 6. 문제 설명 생성
     const problemInfo = await generateProblemDescription({ level, topic, language, code: completeCode });
 
-    // 7. 최종 결과 반환
+    // 7. 최종 결과 반환 (매핑 정보 포함)
     const result = {
       title: problemInfo.title,
       description: problemInfo.description,
@@ -458,7 +557,8 @@ async function generateBlockCodingProblem({ level = 0, topic = 'basic', language
       blankedCode,  // 블랭크가 포함된 코드
       blocks,       // 드래그할 블록들
       blankCount,   // 블랭크 개수
-      keywordsToBlank // 선택된 키워드들
+      keywordsToBlank, // 선택된 키워드들 (BLANK_1, BLANK_2, ... 순서대로 정답)
+      blankMappings // BLANK_ID -> keyword 매핑 정보 (채점 시 사용)
     };
 
     console.log('Block coding problem generated successfully');

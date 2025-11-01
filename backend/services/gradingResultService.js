@@ -122,7 +122,10 @@ class GradingResultService {
         endDate
       } = options;
       
-      const whereClause = { user_id: userId };
+      // userId를 문자열로 변환 (StudySession의 user_id가 STRING 타입이므로)
+      const userIdString = String(userId);
+      
+      const whereClause = { user_id: userIdString };
       
       if (problemType) whereClause.problem_type = problemType;
       if (level !== undefined) whereClause.level = level;
@@ -130,9 +133,19 @@ class GradingResultService {
       
       if (startDate || endDate) {
         whereClause.started_at = {};
-        if (startDate) whereClause.started_at[Op.gte] = new Date(startDate);
-        if (endDate) whereClause.started_at[Op.lte] = new Date(endDate);
+        if (startDate) {
+          const startDateObj = new Date(startDate);
+          whereClause.started_at[Op.gte] = startDateObj;
+          console.log('[GradingResultService] 날짜 필터 - 시작:', startDateObj.toISOString());
+        }
+        if (endDate) {
+          const endDateObj = new Date(endDate);
+          whereClause.started_at[Op.lte] = endDateObj;
+          console.log('[GradingResultService] 날짜 필터 - 종료:', endDateObj.toISOString());
+        }
       }
+      
+      console.log('[GradingResultService] 쿼리 whereClause:', JSON.stringify(whereClause, null, 2));
       
       const { count, rows } = await StudySession.findAndCountAll({
         where: whereClause,
@@ -141,8 +154,28 @@ class GradingResultService {
         offset
       });
       
+      console.log('[GradingResultService] 데이터베이스 조회 결과:', {
+        userId: userIdString,
+        totalCount: count,
+        returnedCount: rows.length,
+        limit,
+        offset,
+        hasDateFilter: !!(startDate || endDate)
+      });
+      
+      // 조회된 레코드의 started_at 확인
+      if (rows.length > 0) {
+        console.log('[GradingResultService] 조회된 레코드 started_at:', 
+          rows.slice(0, 5).map(r => ({
+            id: r.id,
+            started_at: r.started_at,
+            title: r.problem_title
+          }))
+        );
+      }
+      
       // 통계 계산
-      const stats = await this.calculateUserStats(userId, options);
+      const stats = await this.calculateUserStats(userIdString, options);
       
       console.log('[GradingResultService] 풀이 기록 조회 완료:', {
         totalCount: count,
@@ -171,10 +204,26 @@ class GradingResultService {
    */
   static async calculateUserStats(userId, options = {}) {
     try {
-      const whereClause = { user_id: userId };
+      // userId를 문자열로 변환
+      const userIdString = String(userId);
+      
+      const whereClause = { user_id: userIdString };
       
       if (options.problemType) whereClause.problem_type = options.problemType;
       if (options.level !== undefined) whereClause.level = options.level;
+      
+      // 날짜 필터 추가
+      if (options.startDate || options.endDate) {
+        whereClause.started_at = {};
+        if (options.startDate) {
+          const startDate = new Date(options.startDate);
+          whereClause.started_at[Op.gte] = startDate;
+        }
+        if (options.endDate) {
+          const endDate = new Date(options.endDate);
+          whereClause.started_at[Op.lte] = endDate;
+        }
+      }
       
       // 전체 통계
       const totalProblems = await StudySession.count({ where: whereClause });
@@ -217,8 +266,29 @@ class GradingResultService {
         raw: true
       });
       
+<<<<<<< HEAD
       const avgScoreValue = parseFloat(averageScore?.avgScore) || 0;
       const avgAccuracyValue = parseFloat(averageScore?.avgAccuracy) || 0;
+=======
+      // Topic별 통계 (유효한 topic만 필터링)
+      const validTopics = ['graph', 'dp', 'greedy', 'tree', 'string', 'math', 'sort', 'search', 'stack', 'queue', 'hash', 'heap', 'programming'];
+      const topicWhereClause = {
+        ...whereClause,
+        topic: { [Op.in]: validTopics }
+      };
+      
+      const topicStats = await StudySession.findAll({
+        where: topicWhereClause,
+        attributes: [
+          'topic',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'totalCount'],
+          [sequelize.fn('SUM', sequelize.literal('CASE WHEN is_correct = true THEN 1 ELSE 0 END')), 'correctCount'],
+          [sequelize.fn('AVG', sequelize.col('score')), 'avgScore']
+        ],
+        group: ['topic'],
+        raw: true
+      });
+>>>>>>> e42d5acee2bef64f903024aa082beab3cfbf2407
       
       return {
         totalProblems,
@@ -227,7 +297,8 @@ class GradingResultService {
         averageScore: Number(avgScoreValue.toFixed(1)),
         averageAccuracy: Number(avgAccuracyValue.toFixed(1)),
         levelStats,
-        typeStats
+        typeStats,
+        topicStats
       };
       
     } catch (error) {

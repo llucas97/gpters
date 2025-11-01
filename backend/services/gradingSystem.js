@@ -19,8 +19,16 @@ class GradingSystem {
       console.log('[GradingSystem] 블록코딩 채점 시작');
       console.log('[GradingSystem] 문제:', problem.title);
       console.log('[GradingSystem] 사용자 답안:', userAnswer);
+      console.log('[GradingSystem] 문제 정보:', {
+        hasBlankedCode: !!problem.blankedCode,
+        hasKeywordsToBlank: !!problem.keywordsToBlank,
+        keywordsToBlank: problem.keywordsToBlank,
+        hasBlankMappings: !!problem.blankMappings,
+        blankMappings: problem.blankMappings,
+        level: problem.level
+      });
       
-      const { blankedCode, keywordsToBlank, completeCode } = problem;
+      const { blankedCode, keywordsToBlank, completeCode, blankMappings } = problem;
       const { userBlocks } = userAnswer; // 사용자가 드래그한 블록들
       
       if (!userBlocks || !Array.isArray(userBlocks)) {
@@ -35,16 +43,78 @@ class GradingSystem {
       // 사용자 답안을 코드에 적용
       let userCode = blankedCode;
       let correctCount = 0;
-      const totalBlanks = keywordsToBlank.length;
+      const totalBlanks = keywordsToBlank ? keywordsToBlank.length : 0;
       const results = [];
+      
+      if (!totalBlanks || totalBlanks === 0) {
+        return {
+          success: false,
+          error: '문제 정보가 올바르지 않습니다 (keywordsToBlank가 없음)',
+          score: 0,
+          isCorrect: false
+        };
+      }
+      
+      // blankMappings 정보를 사용하여 정답 매핑 생성 (우선시)
+      // blankMappings가 있으면 각 BLANK_ID가 어떤 키워드와 매핑되는지 확인
+      let answerMapping = null;
+      if (blankMappings && Array.isArray(blankMappings) && blankMappings.length > 0) {
+        // blankMappings를 Map으로 변환하여 빠른 조회
+        answerMapping = new Map();
+        blankMappings.forEach(mapping => {
+          answerMapping.set(mapping.blankId, mapping.keyword);
+        });
+        console.log('[GradingSystem] blankMappings를 사용한 정답 매핑:', answerMapping);
+        console.log('[GradingSystem] blankMappings 상세:', blankMappings);
+      }
+      
+      // 사용자 답안 배열 길이 검증 및 정규화
+      if (userBlocks.length !== totalBlanks) {
+        console.warn(`[GradingSystem] 블록코딩 답안 배열 길이 불일치: ${userBlocks.length} != ${totalBlanks}. 부족한 답안은 빈 문자열로 처리합니다.`);
+        // 부족한 답안을 null로 채움
+        while (userBlocks.length < totalBlanks) {
+          userBlocks.push(null);
+        }
+        // 길면 자름
+        if (userBlocks.length > totalBlanks) {
+          userBlocks = userBlocks.slice(0, totalBlanks);
+        }
+      }
       
       // 각 블랭크에 대해 사용자 답안 확인
       for (let i = 0; i < totalBlanks; i++) {
         const blankId = i + 1;
-        const correctAnswer = keywordsToBlank[i];
-        const userAnswer = userBlocks[i];
         
-        if (!userAnswer) {
+        // blankMappings를 우선시하여 정답 결정
+        // blankMappings가 있으면 그것을 사용하고, 없으면 keywordsToBlank 사용
+        let correctAnswer;
+        if (answerMapping && answerMapping.has(blankId)) {
+          correctAnswer = answerMapping.get(blankId);
+          console.log(`[GradingSystem] BLANK_${blankId} 정답 (blankMappings 사용): "${correctAnswer}"`);
+        } else if (keywordsToBlank && keywordsToBlank[i]) {
+          correctAnswer = keywordsToBlank[i];
+          console.log(`[GradingSystem] BLANK_${blankId} 정답 (keywordsToBlank 사용): "${correctAnswer}"`);
+        } else {
+          console.warn(`[GradingSystem] BLANK_${blankId}의 정답을 찾을 수 없습니다.`);
+          correctAnswer = null;
+        }
+        const userAnswer = userBlocks[i] !== undefined && userBlocks[i] !== null 
+          ? String(userBlocks[i]).trim() 
+          : null;
+        
+        if (!correctAnswer) {
+          console.warn(`[GradingSystem] 블록코딩 빈칸 ${i + 1}의 정답이 없습니다.`);
+          results.push({
+            blankId,
+            correctAnswer: correctAnswer || '',
+            userAnswer: null,
+            isCorrect: false,
+            feedback: '정답 정보가 없습니다'
+          });
+          continue;
+        }
+        
+        if (!userAnswer || userAnswer === '') {
           results.push({
             blankId,
             correctAnswer,
@@ -52,10 +122,26 @@ class GradingSystem {
             isCorrect: false,
             feedback: '답안이 없습니다'
           });
+          // 코드에 빈 문자열 적용 (또는 원본 유지)
+          const placeholder = `BLANK_${blankId}`;
+          userCode = userCode.replace(placeholder, '');
           continue;
         }
         
+        // 답안 비교 (정규화된 값 사용)
         const isCorrect = this.compareAnswers(correctAnswer, userAnswer);
+        
+        // 상세 디버깅 로그
+        console.log(`[GradingSystem] BLANK_${blankId} 채점:`, {
+          correctAnswer: `"${correctAnswer}"`,
+          userAnswer: `"${userAnswer}"`,
+          isCorrect: isCorrect,
+          comparisonDetails: {
+            correctNormalized: this.normalizeAnswer(correctAnswer),
+            userNormalized: this.normalizeAnswer(userAnswer)
+          }
+        });
+        
         if (isCorrect) {
           correctCount++;
         }
@@ -76,6 +162,15 @@ class GradingSystem {
       const score = Math.round((correctCount / totalBlanks) * 100);
       const isCorrect = correctCount === totalBlanks;
       
+      // 채점 결과 상세 로그
+      console.log(`[GradingSystem] 채점 완료: ${correctCount}/${totalBlanks} (${score}점)`);
+      console.log('[GradingSystem] 채점 결과 상세:', results.map(r => ({
+        blankId: r.blankId,
+        correct: `"${r.correctAnswer}"`,
+        user: `"${r.userAnswer}"`,
+        match: r.isCorrect ? '✓' : '✗'
+      })));
+      
       // 생성된 코드가 올바른지 추가 검증
       let codeValidation = null;
       if (isCorrect) {
@@ -86,8 +181,6 @@ class GradingSystem {
           console.warn('[GradingSystem] 코드 검증 실패:', error.message);
         }
       }
-      
-      console.log(`[GradingSystem] 채점 완료: ${correctCount}/${totalBlanks} (${score}점)`);
       
       return {
         success: true,
@@ -157,12 +250,41 @@ class GradingSystem {
       const totalBlanks = correctAnswers.length;
       const results = [];
       
+      // 사용자 답안 배열 길이 검증 및 정규화
+      if (userAnswers.length !== totalBlanks) {
+        console.warn(`[GradingSystem] 사용자 답안 배열 길이 불일치: ${userAnswers.length} != ${totalBlanks}. 부족한 답안은 빈 문자열로 처리합니다.`);
+        // 부족한 답안을 빈 문자열로 채움
+        while (userAnswers.length < totalBlanks) {
+          userAnswers.push('');
+        }
+        // 길면 자름 (보통 발생하지 않지만 안전을 위해)
+        if (userAnswers.length > totalBlanks) {
+          userAnswers = userAnswers.slice(0, totalBlanks);
+        }
+      }
+      
       // 각 빈칸에 대해 사용자 답안 확인
       for (let i = 0; i < totalBlanks; i++) {
         const correctAnswer = correctAnswers[i];
-        const userAnswer = userAnswers[i];
+        // userAnswer가 undefined, null, 또는 빈 문자열일 수 있으므로 명확히 처리
+        const userAnswer = userAnswers[i] !== undefined && userAnswers[i] !== null 
+          ? String(userAnswers[i]).trim() 
+          : '';
         
-        if (!userAnswer) {
+        // 정답이 없거나 사용자 답안이 비어있는 경우
+        if (!correctAnswer) {
+          console.warn(`[GradingSystem] 빈칸 ${i + 1}의 정답이 없습니다.`);
+          results.push({
+            blankId: i + 1,
+            correctAnswer: correctAnswer || '',
+            userAnswer: userAnswer || null,
+            isCorrect: false,
+            feedback: '정답 정보가 없습니다'
+          });
+          continue;
+        }
+        
+        if (!userAnswer || userAnswer === '') {
           results.push({
             blankId: i + 1,
             correctAnswer: correctAnswer,
@@ -173,6 +295,7 @@ class GradingSystem {
           continue;
         }
         
+        // 답안 비교 (정규화된 값 사용)
         const isCorrect = this.compareAnswers(correctAnswer, userAnswer);
         if (isCorrect) {
           correctCount++;
@@ -181,7 +304,7 @@ class GradingSystem {
         results.push({
           blankId: i + 1,
           correctAnswer: correctAnswer,
-          userAnswer,
+          userAnswer: userAnswer,
           isCorrect,
           feedback: isCorrect ? '정답입니다!' : `틀렸습니다. 정답은 "${correctAnswer}"입니다.`
         });
@@ -214,6 +337,19 @@ class GradingSystem {
   }
   
   /**
+   * 답안 정규화 헬퍼 함수
+   * @param {string} answer - 답안
+   * @returns {string} 정규화된 답안
+   */
+  static normalizeAnswer(answer) {
+    if (!answer) return '';
+    const str = String(answer).trim();
+    if (!str) return '';
+    // 대소문자 무시, 공백 정규화 (연속된 공백을 하나로)
+    return str.toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+  
+  /**
    * 답안 비교 (대소문자 무시, 공백 정규화)
    * @param {string} correct - 정답
    * @param {string} user - 사용자 답안
@@ -222,9 +358,19 @@ class GradingSystem {
   static compareAnswers(correct, user) {
     if (!correct || !user) return false;
     
-    // 대소문자 무시, 공백 정규화
-    const normalize = (str) => String(str).trim().toLowerCase().replace(/\s+/g, ' ');
-    return normalize(correct) === normalize(user);
+    // 문자열로 변환
+    const correctStr = String(correct).trim();
+    const userStr = String(user).trim();
+    
+    // 빈 문자열 체크
+    if (!correctStr || !userStr) return false;
+    
+    // 정규화된 값 비교
+    const normalizedCorrect = this.normalizeAnswer(correctStr);
+    const normalizedUser = this.normalizeAnswer(userStr);
+    
+    // 정확히 일치하는지 확인
+    return normalizedCorrect === normalizedUser;
   }
   
   /**
