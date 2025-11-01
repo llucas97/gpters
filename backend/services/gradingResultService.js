@@ -266,10 +266,8 @@ class GradingResultService {
         raw: true
       });
       
-<<<<<<< HEAD
       const avgScoreValue = parseFloat(averageScore?.avgScore) || 0;
       const avgAccuracyValue = parseFloat(averageScore?.avgAccuracy) || 0;
-=======
       // Topic별 통계 (유효한 topic만 필터링)
       const validTopics = ['graph', 'dp', 'greedy', 'tree', 'string', 'math', 'sort', 'search', 'stack', 'queue', 'hash', 'heap', 'programming'];
       const topicWhereClause = {
@@ -288,7 +286,6 @@ class GradingResultService {
         group: ['topic'],
         raw: true
       });
->>>>>>> e42d5acee2bef64f903024aa082beab3cfbf2407
       
       return {
         totalProblems,
