@@ -35,6 +35,7 @@ class UserStatsService {
       
       const result = await response.json();
       console.log('[UserStatsService] 전체 통계 조회 결과:', result);
+      console.log('[UserStatsService] recentActivity 데이터:', result.stats?.recentActivity);
       
       return result;
       

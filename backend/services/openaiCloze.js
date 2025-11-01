@@ -264,48 +264,157 @@ function selectRandomBlanks(foundWords, level, code = '') {
 }
 
 // 선택된 키워드로 코드에 블랭크 적용 (새로운 데이터 구조)
+// 각 키워드가 여러 번 나타나면 랜덤하게 하나만 블랭크로 처리
+// 반환값: { templateCode, solutions, blankMappings } - 블랭크 코드와 매핑 정보
 function applyBlanksToCode(code, selectedWords) {
-  if (!code || !selectedWords || selectedWords.length === 0) return { templateCode: code, solutions: [] };
+  if (!code || !selectedWords || selectedWords.length === 0) {
+    return { templateCode: code, solutions: [], blankMappings: [] };
+  }
   
-  let modifiedCode = String(code);
-  const solutions = [];
+  // 원본 코드를 기반으로 모든 키워드의 위치를 먼저 찾기
+  const originalCode = String(code);
+  const allKeywordPositions = new Map(); // keyword -> [positions]
   
-  selectedWords.forEach((word, index) => {
-    const blankId = index + 1;
-    const placeholder = `__${blankId}__`; // 표준 플레이스홀더 형식 사용
-    
-    // 여러 패턴으로 단어 찾기 및 교체 (첫 번째 매칭만)
-    const patterns = [
-      { 
-        regex: new RegExp(`\\b${escapeRegex(word)}\\b`),  // 'g' 플래그 제거
-        replacement: placeholder
-      },
-      { 
-        regex: new RegExp(`\\.${escapeRegex(word)}\\b`),  // 'g' 플래그 제거
-        replacement: `.${placeholder}`
-      },
-      { 
-        regex: new RegExp(`\\b${escapeRegex(word)}\\(`),  // 'g' 플래그 제거
-        replacement: `${placeholder}(`
+  selectedWords.forEach((word) => {
+    if (!allKeywordPositions.has(word)) {
+      const positions = [];
+      
+      // 여러 패턴으로 단어 찾기
+      const patterns = [
+        { 
+          regex: new RegExp(`\\b${escapeRegex(word)}\\b`, 'g'),
+          offset: 0
+        },
+        { 
+          regex: new RegExp(`\\.${escapeRegex(word)}\\b`, 'g'),
+          offset: 1  // '.' 문자 하나 offset
+        },
+        { 
+          regex: new RegExp(`\\b${escapeRegex(word)}\\(`, 'g'),
+          offset: 0
+        }
+      ];
+      
+      for (const pattern of patterns) {
+        let match;
+        const regexCopy = new RegExp(pattern.regex.source, pattern.regex.flags);
+        while ((match = regexCopy.exec(originalCode)) !== null) {
+          positions.push({
+            index: match.index + pattern.offset,
+            length: match[0].length - pattern.offset,
+            keyword: word,
+            offset: pattern.offset
+          });
+        }
       }
-    ];
-    
-    // 첫 번째 매칭만 교체 (패턴 우선순위대로 시도)
-    for (const pattern of patterns) {
-      if (pattern.regex.test(modifiedCode)) {
-        modifiedCode = modifiedCode.replace(pattern.regex, pattern.replacement);
-        break;
-      }
+      
+      allKeywordPositions.set(word, positions);
+      console.log(`[applyBlanksToCode] 키워드 "${word}": ${positions.length}개 발견`, positions);
     }
+  });
+  
+  // 각 키워드에 대해 랜덤으로 하나의 위치 선택
+  const selectedPositions = [];
+  selectedWords.forEach((word, index) => {
+    const positions = allKeywordPositions.get(word) || [];
+    
+    if (positions.length === 0) {
+      console.warn(`[applyBlanksToCode] 키워드 "${word}"가 코드에서 찾을 수 없습니다.`);
+      return;
+    }
+    
+    // 랜덤하게 하나 선택
+    const randomIndex = Math.floor(Math.random() * positions.length);
+    const selectedPosition = {
+      ...positions[randomIndex],
+      blankId: index + 1,
+      keyword: word
+    };
+    
+    console.log(`[applyBlanksToCode] BLANK_${index + 1} 선택: 키워드 "${word}" (${positions.length}개 중 ${randomIndex + 1}번째, 위치: ${selectedPosition.index})`);
+    
+    selectedPositions.push(selectedPosition);
+  });
+  
+  // 위치 순서대로 정렬 (뒤에서부터 교체하여 인덱스 변경 방지)
+  selectedPositions.sort((a, b) => b.index - a.index);
+  
+  // 뒤에서부터 교체하여 인덱스 변경 영향을 받지 않도록 처리
+  let modifiedCode = originalCode;
+  const solutions = [];
+  const blankMappings = [];
+  
+  selectedPositions.forEach((position) => {
+    const blankId = position.blankId;
+    const placeholder = `__${blankId}__`;
+    
+    // 플레이스홀더 형식 결정 (패턴에 따라)
+    let replacement = placeholder;
+    if (position.offset === 1) {
+      // .length, .map 같은 패턴
+      replacement = `.${placeholder}`;
+    } else if (originalCode[position.index + position.length] === '(') {
+      // method() 같은 패턴
+      replacement = `${placeholder}(`;
+    }
+    
+    // 뒤에서부터 교체
+    modifiedCode = 
+      modifiedCode.slice(0, position.index) + 
+      replacement + 
+      modifiedCode.slice(position.index + position.length);
+    
+    // 매핑 정보 저장
+    blankMappings.push({
+      blankId: blankId,
+      placeholder: `__${blankId}__`,
+      keyword: position.keyword,
+      originalIndex: position.index,
+      originalLength: position.length
+    });
     
     solutions.push({
       placeholder: placeholder,
-      answer: word,
-      hint: getHintForKeyword(word)
+      answer: position.keyword,
+      hint: getHintForKeyword(position.keyword)
     });
   });
   
-  return { templateCode: modifiedCode, solutions };
+  // blankMappings를 blankId 순서대로 정렬
+  blankMappings.sort((a, b) => a.blankId - b.blankId);
+  
+  // 최종 매핑 검증 로그
+  console.log('[applyBlanksToCode] 최종 blankMappings:', blankMappings.map(m => ({
+    blankId: m.blankId,
+    placeholder: m.placeholder,
+    keyword: m.keyword,
+    originalIndex: m.originalIndex
+  })));
+  console.log('[applyBlanksToCode] solutions 배열:', solutions.map(s => ({
+    placeholder: s.placeholder,
+    answer: s.answer
+  })));
+  
+  // 검증: blankMappings와 solutions가 일치하는지 확인
+  const mappingMatch = blankMappings.every((mapping, idx) => {
+    const expectedKeyword = selectedWords[idx];
+    const actualKeyword = mapping.keyword;
+    const match = expectedKeyword === actualKeyword;
+    if (!match) {
+      console.error(`[applyBlanksToCode] 매핑 불일치! BLANK_${mapping.blankId}: selectedWords[${idx}]="${expectedKeyword}" != blankMappings.keyword="${actualKeyword}"`);
+    }
+    return match;
+  });
+  
+  if (!mappingMatch) {
+    console.error('[applyBlanksToCode] ⚠️ 경고: blankMappings와 selectedWords가 일치하지 않습니다!');
+  }
+  
+  return { 
+    templateCode: modifiedCode, 
+    solutions,
+    blankMappings // BLANK_ID -> keyword 매핑 정보 (채점 시 사용)
+  };
 }
 
 // 키워드별 힌트 생성
@@ -415,12 +524,13 @@ function enforceClozeShape(result, level) {
   const selectedWords = selectRandomBlanks(foundWords, level, code);
   
   if (selectedWords.length > 0) {
-    const { templateCode, solutions } = applyBlanksToCode(code, selectedWords);
+    const { templateCode, solutions, blankMappings } = applyBlanksToCode(code, selectedWords);
     return { 
       ...result, 
       code: templateCode,           // 템플릿 코드 (__1__, __2__ 포함)
       templateCode: templateCode,   // 명시적 필드명
       solutions: solutions,         // 새로운 solutions 배열 구조
+      blankMappings: blankMappings, // BLANK_ID -> keyword 매핑 정보 (채점 시 사용)
       blanks: solutions.map((s, i) => ({  // 기존 호환성을 위한 변환
         id: i + 1,
         answer: s.answer,
@@ -430,26 +540,191 @@ function enforceClozeShape(result, level) {
   }
   
   // 후보가 없을 경우 기존 로직 사용 (표준 플레이스홀더 형식)
+  // 하지만 blankMappings도 생성하여 채점 시 사용할 수 있도록 함
   const blanks = [];
-
-  // 동적으로 블랭크 생성
+  const blankMappings = [];
+  const solutions = [];
+  
+  // 원본 코드 백업 (정답 키워드 위치 찾기용)
+  const originalCode = String(code);
+  
+  // 먼저 모든 키워드의 위치를 찾기
+  // 같은 키워드가 여러 빈칸에 사용되는 경우를 대비해 키워드별로 위치를 저장
+  const keywordPositionsMap = new Map(); // keyword -> [positions]
+  const blankKeywords = []; // 빈칸별 키워드 저장
+  
   for (let i = 1; i <= blankCount; i++) {
-    const placeholder = `__${i}__`;  // 표준 플레이스홀더 형식
-    if (!new RegExp(escapeRegex(placeholder)).test(code)) {
-      code = code.replace(/\b([A-Za-z_][A-Za-z0-9_]*)\b/, placeholder);
+    const placeholder = `__${i}__`;
+    let answer = sanitizeWord(result.blanks?.[i-1]?.answer) || `identifier${i}`;
+    blankKeywords.push({ blankId: i, placeholder, keyword: answer });
+    
+    // 같은 키워드가 이미 처리되었으면 건너뛰기
+    if (keywordPositionsMap.has(answer)) continue;
+    
+    // 원본 코드에서 키워드 위치 찾기
+    const patterns = [
+      { 
+        regex: new RegExp(`\\b${escapeRegex(answer)}\\b`, 'g'),
+        offset: 0
+      },
+      { 
+        regex: new RegExp(`\\.${escapeRegex(answer)}\\b`, 'g'),
+        offset: 1  // '.' 문자 하나 offset
+      },
+      { 
+        regex: new RegExp(`\\b${escapeRegex(answer)}\\(`, 'g'),
+        offset: 0
+      }
+    ];
+    
+    const positions = [];
+    for (const pattern of patterns) {
+      let match;
+      const regexCopy = new RegExp(pattern.regex.source, pattern.regex.flags);
+      while ((match = regexCopy.exec(originalCode)) !== null) {
+        positions.push({
+          index: match.index + pattern.offset,
+          length: match[0].length - pattern.offset,
+          keyword: answer,
+          offset: pattern.offset
+        });
+      }
     }
+    
+    keywordPositionsMap.set(answer, positions);
+    console.log(`[enforceClozeShape] 키워드 "${answer}": ${positions.length}개 발견`);
+  }
+  
+  // 각 키워드에 대해 랜덤으로 하나의 위치만 선택 (같은 키워드는 같은 위치 사용)
+  const keywordSelectedPositions = new Map(); // keyword -> selectedPosition
+  keywordPositionsMap.forEach((positions, keyword) => {
+    if (positions.length === 0) {
+      console.warn(`[enforceClozeShape] 키워드 "${keyword}"가 코드에서 찾을 수 없습니다.`);
+      keywordSelectedPositions.set(keyword, null);
+    } else {
+      // 랜덤하게 하나 선택
+      const randomIndex = Math.floor(Math.random() * positions.length);
+      const selectedPosition = positions[randomIndex];
+      keywordSelectedPositions.set(keyword, selectedPosition);
+      console.log(`[enforceClozeShape] 키워드 "${keyword}": ${positions.length}개 중 ${randomIndex + 1}번째 위치 선택 (인덱스: ${selectedPosition.index})`);
+    }
+  });
+  
+  // 각 빈칸에 대해 선택된 위치 할당
+  const selectedPositions = [];
+  const missingKeywordBlanks = []; // 키워드를 찾지 못한 빈칸들
+  
+  blankKeywords.forEach(({ blankId, placeholder, keyword }) => {
+    const selectedPosition = keywordSelectedPositions.get(keyword);
+    
+    if (!selectedPosition) {
+      // 키워드를 찾지 못한 경우
+      missingKeywordBlanks.push({
+        blankId,
+        placeholder,
+        keyword
+      });
+    } else {
+      // 선택된 위치 사용 (같은 키워드는 같은 위치 사용)
+      selectedPositions.push({
+        ...selectedPosition,
+        blankId,
+        keyword
+      });
+    }
+    
     blanks.push({ 
-      id: i,
-      answer: sanitizeWord(result.blanks?.[i-1]?.answer) || `identifier${i}`,
+      id: blankId,
+      answer: keyword,
       hint: '식별자(한 단어)' 
     });
-  }
+    
+    solutions.push({
+      placeholder: placeholder,
+      answer: keyword,
+      hint: '식별자(한 단어)'
+    });
+  })
+  
+  // 같은 위치(index)에 여러 빈칸이 할당된 경우 처리
+  // 위치별로 그룹화하여 같은 위치는 한 번만 블랭크 처리
+  const positionGroups = new Map(); // index -> [{blankId, keyword, ...}]
+  selectedPositions.forEach((position) => {
+    const key = `${position.index}_${position.length}`;
+    if (!positionGroups.has(key)) {
+      positionGroups.set(key, []);
+    }
+    positionGroups.get(key).push(position);
+  });
+  
+  // 위치 순서대로 정렬 (뒤에서부터 교체하여 인덱스 변경 방지)
+  const sortedPositions = Array.from(positionGroups.entries()).sort((a, b) => {
+    const indexA = parseInt(a[0].split('_')[0]);
+    const indexB = parseInt(b[0].split('_')[0]);
+    return indexB - indexA;
+  });
+  
+  // 뒤에서부터 교체
+  let modifiedCode = originalCode;
+  sortedPositions.forEach(([key, positions]) => {
+    // 같은 위치에 여러 빈칸이 있으면 첫 번째 것만 사용 (같은 키워드는 이미 같은 위치로 그룹화됨)
+    const position = positions[0];
+    const placeholder = `__${position.blankId}__`;
+    
+    // 플레이스홀더 형식 결정
+    let replacement = placeholder;
+    if (position.offset === 1) {
+      replacement = `.${placeholder}`;
+    } else if (originalCode[position.index + position.length] === '(') {
+      replacement = `${placeholder}(`;
+    }
+    
+    modifiedCode = 
+      modifiedCode.slice(0, position.index) + 
+      replacement + 
+      modifiedCode.slice(position.index + position.length);
+    
+    // 같은 위치의 모든 빈칸에 대해 매핑 정보 추가
+    positions.forEach((pos) => {
+      blankMappings.push({
+        blankId: pos.blankId,
+        placeholder: `__${pos.blankId}__`,
+        keyword: pos.keyword,
+        originalIndex: pos.index,
+        originalLength: pos.length
+      });
+    });
+  });
+  
+  // 키워드를 찾지 못한 빈칸 처리
+  missingKeywordBlanks.forEach((blank) => {
+    // 이미 플레이스홀더가 있으면 그대로 사용
+    if (!new RegExp(escapeRegex(blank.placeholder)).test(modifiedCode)) {
+      modifiedCode = modifiedCode.replace(/\b([A-Za-z_][A-Za-z0-9_]*)\b/, blank.placeholder);
+    }
+    // blankMappings에 추가 (정확한 위치는 모르지만 매핑은 유지)
+    blankMappings.push({
+      blankId: blank.blankId,
+      placeholder: blank.placeholder,
+      keyword: blank.keyword,
+      originalIndex: -1, // 위치 없음 표시
+      originalLength: blank.keyword.length
+    });
+  });
+  
+  // blankMappings를 blankId 순서대로 정렬
+  blankMappings.sort((a, b) => a.blankId - b.blankId);
+  
+  // 최종 코드는 modifiedCode 사용
+  code = modifiedCode;
 
   return { 
     ...result, 
     code,
     templateCode: code,
-    blanks 
+    blanks,
+    solutions, // solutions 배열 추가
+    blankMappings // blankMappings 추가 (채점 시 사용)
   };
 }
 

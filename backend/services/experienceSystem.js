@@ -40,36 +40,42 @@ class ExperienceSystem {
   
   /**
    * 현재 경험치로부터 레벨 계산
-   * @param {number} totalExperience - 총 경험치
+   * @param {number} totalExperience - 총 누적 경험치
    * @returns {Object} 레벨 정보
    */
   static calculateLevelFromExperience(totalExperience) {
     let level = 1;
+    let remainingExp = totalExperience;
     
-    // 각 레벨의 누적 최대 경험치를 확인하여 현재 레벨 계산
-    // totalExperience가 현재 레벨의 최대치를 넘으면 레벨업
-    while (totalExperience >= this.calculateMaxExperience(level)) {
-      level++;
+    // 레벨별로 필요한 경험치를 차감하며 레벨 계산
+    while (true) {
+      const expForCurrentLevel = this.calculateExperienceToNextLevel(level);
+      
+      if (remainingExp >= expForCurrentLevel) {
+        // 현재 레벨의 경험치를 모두 채웠으므로 레벨업
+        remainingExp -= expForCurrentLevel;
+        level++;
+      } else {
+        // 현재 레벨에서 경험치가 부족함
+        break;
+      }
     }
-    level--; // 한 단계 초과했으므로 되돌림
     
     if (level < 1) level = 1; // 최소 레벨 1
     
-    // 현재 레벨의 시작 경험치 (이전 레벨까지의 총 경험치)
-    const currentLevelStartExp = level === 1 ? 0 : this.calculateMaxExperience(level - 1);
-    const nextLevelMaxExp = this.calculateMaxExperience(level);
-    const currentLevelExp = totalExperience - currentLevelStartExp;
-    const expToNextLevel = nextLevelMaxExp - totalExperience;
-    const levelExpRequired = nextLevelMaxExp - currentLevelStartExp;
+    // 현재 레벨에서의 경험치 (0부터 시작)
+    const currentLevelExp = remainingExp;
+    const levelExpRequired = this.calculateExperienceToNextLevel(level);
+    const expToNextLevel = levelExpRequired - currentLevelExp;
+    const progressPercentage = Math.max(0, Math.min(100, Math.round((currentLevelExp / levelExpRequired) * 100)));
     
     return {
       level,
-      currentLevelExp,
-      expToNextLevel,
-      totalExperience,
-      currentLevelMaxExp: currentLevelStartExp,
-      nextLevelMaxExp,
-      progressPercentage: Math.max(0, Math.min(100, Math.round((currentLevelExp / levelExpRequired) * 100)))
+      currentLevelExp,           // 현재 레벨에서의 경험치 (0부터 시작)
+      expToNextLevel,             // 다음 레벨까지 필요한 경험치
+      totalExperience,            // 총 누적 경험치
+      levelExpRequired,           // 현재 레벨에서 필요한 총 경험치
+      progressPercentage          // 진행률 (0-100%)
     };
   }
   

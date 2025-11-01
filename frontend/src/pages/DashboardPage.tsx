@@ -120,11 +120,14 @@ const DashboardPage: React.FC = () => {
                           )}
                         </div>
                         <div className="mb-2">
-                          <span className={`badge bg-${UserProgressService.getDifficultyBadgeColor(problem.level)} me-2`}>
-                            {UserProgressService.getDifficultyText(problem.level)}
+                          <span className="badge bg-primary me-1">
+                            레벨 {problem.level}
                           </span>
-                          <span className="badge bg-secondary">
-                            {UserProgressService.getProblemTypeName(problem.type)}
+                          <span className="badge bg-secondary me-1">
+                            {UserProgressService.getLanguageName(problem.language)}
+                          </span>
+                          <span className="badge bg-info">
+                            {UserProgressService.getTopicName(problem.topic)}
                           </span>
                         </div>
                         <div className="small text-muted">

@@ -216,8 +216,18 @@ class GradingSystem {
       console.log('[GradingSystem] 빈칸채우기 채점 시작');
       console.log('[GradingSystem] 문제:', problem.title);
       console.log('[GradingSystem] 사용자 답안:', userAnswer);
+      console.log('[GradingSystem] 문제 정보:', {
+        hasTemplateCode: !!problem.templateCode,
+        hasSolutions: !!problem.solutions,
+        hasBlocks: !!problem.blocks,
+        hasKeywordsToBlank: !!problem.keywordsToBlank,
+        hasBlankMappings: !!problem.blankMappings,
+        blankMappings: problem.blankMappings,
+        solutions: problem.solutions,
+        level: problem.level
+      });
       
-      const { templateCode, solutions, blocks, keywordsToBlank } = problem;
+      const { templateCode, solutions, blocks, keywordsToBlank, blankMappings } = problem;
       const { userAnswers } = userAnswer; // 사용자가 입력한 답안들
       
       if (!userAnswers || !Array.isArray(userAnswers)) {
@@ -229,25 +239,48 @@ class GradingSystem {
         };
       }
       
-      // solutions 또는 blocks/keywordsToBlank 사용
+      // blankMappings 정보를 사용하여 정답 매핑 생성 (우선시)
+      // blankMappings가 있으면 각 BLANK_ID가 어떤 키워드와 매핑되는지 확인
+      let answerMapping = null;
+      if (blankMappings && Array.isArray(blankMappings) && blankMappings.length > 0) {
+        // blankMappings를 Map으로 변환하여 빠른 조회 (blankId -> keyword)
+        // 레벨 2처럼 blankId를 직접 키로 사용하여 확실한 매핑 보장
+        answerMapping = new Map();
+        blankMappings.forEach(mapping => {
+          answerMapping.set(mapping.blankId, mapping.keyword);
+        });
+        console.log('[GradingSystem] blankMappings를 사용한 정답 매핑 (blankId -> keyword):', answerMapping);
+        console.log('[GradingSystem] blankMappings 상세:', blankMappings);
+      }
+      
+      // blankMappings가 있으면 그것을 기준으로 totalBlanks 결정
+      // 없으면 solutions/keywordsToBlank 사용
+      let totalBlanks;
       let correctAnswers;
-      if (solutions && Array.isArray(solutions)) {
+      
+      if (answerMapping && answerMapping.size > 0) {
+        // blankMappings가 있으면 그것의 개수를 totalBlanks로 사용
+        totalBlanks = answerMapping.size;
+        console.log(`[GradingSystem] blankMappings에서 총 ${totalBlanks}개의 빈칸 확인`);
+      } else if (solutions && Array.isArray(solutions)) {
         correctAnswers = solutions.map(s => s.answer);
+        totalBlanks = correctAnswers.length;
       } else if (blocks && Array.isArray(blocks)) {
         correctAnswers = blocks.filter(b => b.type === 'answer').map(b => b.text);
+        totalBlanks = correctAnswers.length;
       } else if (keywordsToBlank && Array.isArray(keywordsToBlank)) {
         correctAnswers = keywordsToBlank;
+        totalBlanks = correctAnswers.length;
       } else {
         return {
           success: false,
-          error: '문제 정보가 올바르지 않습니다 (solutions, blocks, keywordsToBlank 중 하나 필요)',
+          error: '문제 정보가 올바르지 않습니다 (blankMappings, solutions, blocks, keywordsToBlank 중 하나 필요)',
           score: 0,
           isCorrect: false
         };
       }
       
       let correctCount = 0;
-      const totalBlanks = correctAnswers.length;
       const results = [];
       
       // 사용자 답안 배열 길이 검증 및 정규화
@@ -265,7 +298,22 @@ class GradingSystem {
       
       // 각 빈칸에 대해 사용자 답안 확인
       for (let i = 0; i < totalBlanks; i++) {
-        const correctAnswer = correctAnswers[i];
+        const blankId = i + 1;
+        
+        // blankMappings를 우선시하여 정답 결정
+        // blankMappings가 있으면 그것을 사용하고, 없으면 solutions/keywordsToBlank 사용
+        let correctAnswer;
+        if (answerMapping && answerMapping.has(blankId)) {
+          correctAnswer = answerMapping.get(blankId);
+          console.log(`[GradingSystem] 빈칸 ${blankId} (__${blankId}__) 정답 (blankMappings 사용): "${correctAnswer}"`);
+        } else if (correctAnswers && correctAnswers[i]) {
+          correctAnswer = correctAnswers[i];
+          console.log(`[GradingSystem] 빈칸 ${blankId} (__${blankId}__) 정답 (solutions/keywordsToBlank 사용): "${correctAnswer}"`);
+        } else {
+          console.warn(`[GradingSystem] 빈칸 ${blankId} (__${blankId}__)의 정답을 찾을 수 없습니다.`);
+          correctAnswer = null;
+        }
+        
         // userAnswer가 undefined, null, 또는 빈 문자열일 수 있으므로 명확히 처리
         const userAnswer = userAnswers[i] !== undefined && userAnswers[i] !== null 
           ? String(userAnswers[i]).trim() 
@@ -273,9 +321,9 @@ class GradingSystem {
         
         // 정답이 없거나 사용자 답안이 비어있는 경우
         if (!correctAnswer) {
-          console.warn(`[GradingSystem] 빈칸 ${i + 1}의 정답이 없습니다.`);
+          console.warn(`[GradingSystem] 빈칸 ${blankId}의 정답이 없습니다.`);
           results.push({
-            blankId: i + 1,
+            blankId: blankId,
             correctAnswer: correctAnswer || '',
             userAnswer: userAnswer || null,
             isCorrect: false,
@@ -286,7 +334,7 @@ class GradingSystem {
         
         if (!userAnswer || userAnswer === '') {
           results.push({
-            blankId: i + 1,
+            blankId: blankId,
             correctAnswer: correctAnswer,
             userAnswer: null,
             isCorrect: false,
@@ -297,12 +345,23 @@ class GradingSystem {
         
         // 답안 비교 (정규화된 값 사용)
         const isCorrect = this.compareAnswers(correctAnswer, userAnswer);
+        
+        // 상세 디버깅 로그
+        console.log(`[GradingSystem] 빈칸 ${blankId} 채점:`, {
+          correctAnswer: `"${correctAnswer}"`,
+          userAnswer: `"${userAnswer}"`,
+          isCorrect: isCorrect,
+          comparisonDetails: {
+            correctNormalized: this.normalizeAnswer(correctAnswer),
+            userNormalized: this.normalizeAnswer(userAnswer)
+          }
+        });
         if (isCorrect) {
           correctCount++;
         }
         
         results.push({
-          blankId: i + 1,
+          blankId: blankId,
           correctAnswer: correctAnswer,
           userAnswer: userAnswer,
           isCorrect,
@@ -313,7 +372,14 @@ class GradingSystem {
       const score = Math.round((correctCount / totalBlanks) * 100);
       const isCorrect = correctCount === totalBlanks;
       
-      console.log(`[GradingSystem] 채점 완료: ${correctCount}/${totalBlanks} (${score}점)`);
+      // 채점 결과 상세 로그
+      console.log(`[GradingSystem] 빈칸채우기 채점 완료: ${correctCount}/${totalBlanks} (${score}점)`);
+      console.log('[GradingSystem] 채점 결과 상세:', results.map(r => ({
+        blankId: r.blankId,
+        correct: `"${r.correctAnswer}"`,
+        user: `"${r.userAnswer}"`,
+        match: r.isCorrect ? '✓' : '✗'
+      })));
       
       return {
         success: true,
