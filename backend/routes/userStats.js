@@ -245,7 +245,6 @@ router.get('/:userId/achievements', async (req, res) => {
  * 최근 활동 조회
  */
 async function getRecentActivity(userId, days) {
-<<<<<<< HEAD
   try {
     // userId를 문자열로 변환
     const userIdString = String(userId);
@@ -309,7 +308,6 @@ async function getRecentActivity(userId, days) {
       averageScore: 0
     };
   }
-=======
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
@@ -327,7 +325,6 @@ async function getRecentActivity(userId, days) {
     correctProblems: result.records.filter(r => r.is_correct).length,
     averageScore: Number((result.records.reduce((sum, r) => sum + (r.score || 0), 0) / result.totalCount || 0).toFixed(1))
   };
->>>>>>> 7c35fb6d82bc4e54a9132af7aaf2a11be75fb65f
 }
 
 /**
