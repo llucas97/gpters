@@ -1,11 +1,13 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuth()
+  const navigate = useNavigate()
 
   const handleLogout = () => {
     logout()
+    navigate('/')
   }
 
   return (
@@ -53,12 +55,6 @@ const Navbar = () => {
                 <li className="nav-item">
                   <Link className="nav-link" to="/solve">
                     <i className="bi bi-code-slash me-1"></i>
-                    문제 해결
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/solved">
-                    <i className="bi bi-puzzle me-1"></i>
                     문제 해결
                   </Link>
                 </li>

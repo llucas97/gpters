@@ -217,12 +217,15 @@ class GradingResultService {
         raw: true
       });
       
+      const avgScoreValue = parseFloat(averageScore?.avgScore) || 0;
+      const avgAccuracyValue = parseFloat(averageScore?.avgAccuracy) || 0;
+      
       return {
         totalProblems,
         correctProblems,
-        accuracy: totalProblems > 0 ? (correctProblems / totalProblems) * 100 : 0,
-        averageScore: averageScore?.avgScore || 0,
-        averageAccuracy: averageScore?.avgAccuracy || 0,
+        accuracy: Number((totalProblems > 0 ? (correctProblems / totalProblems) * 100 : 0).toFixed(1)),
+        averageScore: Number(avgScoreValue.toFixed(1)),
+        averageAccuracy: Number(avgAccuracyValue.toFixed(1)),
         levelStats,
         typeStats
       };

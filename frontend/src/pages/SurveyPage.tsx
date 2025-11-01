@@ -403,7 +403,7 @@ const SurveyPage: React.FC = () => {
               <div className="card-body p-4 text-center">
                 <div className="alert alert-info">
                   <h4>✅ 이미 설문조사를 시행했습니다!</h4>
-                  <p className="mb-0">설문조사는 한 번만 참여할 수 있습니다. 감사합니다!</p>
+                  <p className="mb-0">설문조사는 한 번만 참여할 수 있습니다.</p>
                 </div>
                 <button 
                   className="btn btn-primary" 
@@ -450,7 +450,7 @@ const SurveyPage: React.FC = () => {
       updateUser({ survey_completed: true });
       
       // 성공 메시지 표시
-      alert(`설문조사가 완료되었습니다! 감사합니다.\n\n설문 ID: ${result.data.surveyId}\n제출 시간: ${new Date(result.data.submittedAt).toLocaleString('ko-KR')}`);
+      alert(`설문조사가 완료되었습니다!\n`);
       
       // 홈페이지로 리다이렉트
       setTimeout(() => {

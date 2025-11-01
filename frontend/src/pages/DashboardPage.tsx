@@ -190,7 +190,7 @@ const DashboardPage: React.FC = () => {
                             <div className="border rounded p-2 small">
                               <div className="fw-bold">레벨 {level.level}</div>
                               <div className="text-muted">
-                                정답: {level.correct}/{level.total} ({level.successRate}%)
+                                정답: {level.correct}/{level.total} ({level.successRate.toFixed(1)}%)
                               </div>
                             </div>
                           </div>

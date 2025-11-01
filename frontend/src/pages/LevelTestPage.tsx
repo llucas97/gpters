@@ -36,7 +36,7 @@ const LevelTestPage: React.FC = () => {
     {
       id: 1,
       level: 0,
-      question: "다음 중 변수 선언 방법이 올바른 것은?",
+      question: "다음중 배연 인덱스 기준 변수 선언 방법이 올바른 것은?",
       options: [
         "var name = 'John';",
         "name = 'John';",
@@ -56,7 +56,7 @@ const LevelTestPage: React.FC = () => {
         "var myFunc = function() {}",
         "모두 올바름"
       ],
-      correctAnswer: 3,
+      correctAnswer: 4,
       explanation: "JavaScript에서는 여러 방법으로 함수를 선언할 수 있습니다."
     },
     // Level 1 - 쉬움
@@ -73,7 +73,7 @@ const LevelTestPage: React.FC = () => {
       level: 1,
       question: "다음 중 배열 메서드가 아닌 것은?",
       options: ["push()", "pop()", "length()", "shift()"],
-      correctAnswer: 2,
+      correctAnswer: 3,
       explanation: "length는 메서드가 아닌 속성입니다."
     },
     // Level 2 - 보통

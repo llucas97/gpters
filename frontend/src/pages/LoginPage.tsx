@@ -94,8 +94,6 @@ const LoginPage = () => {
         login(userData)
       }
       
-      alert('로그인 성공!')
-      
       // 로그인 성공 후 홈으로 이동
       navigate('/')
       
