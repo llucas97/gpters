@@ -17,6 +17,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "antd": "^5.27.6",
+    "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -28,6 +30,7 @@
     "json5": "^2.2.3",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.14.2",
+    "node-fetch": "^2.7.0",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",

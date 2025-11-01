@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "antd": "^5.27.6",
     "nodemon": "^3.1.10",
     "recharts": "^3.2.1",
     "task-master-ai": "^0.19.0"

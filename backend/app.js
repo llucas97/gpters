@@ -22,6 +22,11 @@ const analyticsRoutes = require('./routes/analytics');
 const solveRoutes = require('./routes/solve');
 const bojRoutes = require('./routes/boj');
 const blockCodingRoutes = require('./routes/blockCoding');
+const gradingRoutes = require('./routes/grading');
+const userStatsRoutes = require('./routes/userStats');
+const experienceRoutes = require('./routes/experience');
+const problemEvaluationRoutes = require('./routes/problemEvaluation');
+const userProgressRoutes = require('./routes/userProgress');
 
 const app = express();
 initPassport();
@@ -80,6 +85,11 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/solve', solveRoutes);
 app.use('/api/boj', bojRoutes);
 app.use('/api/block-coding', blockCodingRoutes);
+app.use('/api/grading', gradingRoutes);
+app.use('/api/user-stats', userStatsRoutes);
+app.use('/api/experience', experienceRoutes);
+app.use('/api/problem-evaluation', problemEvaluationRoutes);
+app.use('/api/user-progress', userProgressRoutes);
 
 // API 전용 백엔드 - HTML 라우트 제거됨
 
@@ -99,10 +109,17 @@ if (process.env.NODE_ENV !== 'test') {
   const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-  // ✅ DB 연결
+  // ✅ DB 연결 및 테이블 생성
   db.sequelize.authenticate()
-    .then(() => console.log("RDS 연결 성공"))
-    .catch(err => console.error("RDS 연결 실패:", err));
+    .then(() => {
+      console.log("RDS 연결 성공");
+      // 테이블이 없으면 생성 (기존 데이터 유지)
+      // alter: true는 인덱스 문제를 일으킬 수 있으므로 제거
+      // return db.sequelize.sync({ alter: true });
+      return db.sequelize.sync();
+    })
+    .then(() => console.log("데이터베이스 테이블 동기화 완료"))
+    .catch(err => console.error("데이터베이스 오류:", err));
 }
 
 // 테스트를 위해 app export

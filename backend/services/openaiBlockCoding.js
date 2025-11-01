@@ -1,3 +1,10 @@
+/*
+backend/services/openaiBlockCoding.js - OpenAI로 블록코딩 문제 생성
+완전한 코드를 생성하고, 핵심 키워드를 블랭크(BLANK_1, BLANK_2 등)로 치환
+정답 블록 + 오답 블록(distractors)을 함께 생성
+드래그 앤 드롭으로 채울 수 있게 블록 데이터 제공
+*/
+
 'use strict';
 
 if (!global.fetch) {
@@ -172,6 +179,7 @@ function extractKeywordCandidates(code, language) {
 function getBlankCount(level) {
   if (level === 0) return 1;
   if (level === 1) return 2;
+  if (level === 2) return 3;
   return Math.min(Math.max(2, Math.floor(level / 5)), 6); // 2~6개
 }
 
@@ -224,8 +232,15 @@ function createBlankedCode(originalCode, keywordsToBlank) {
   
   keywordsToBlank.forEach((keyword, index) => {
     const placeholder = `BLANK_${index + 1}`;
-    // 단어 경계를 고려하여 정확히 매칭
-    const regex = new RegExp(`\\b${keyword}\\b`, 'g');
+    // 특수문자를 이스케이프 처리
+    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+    // 특수문자(+,-,*,/,=)는 단어 경계 없이 매칭, 일반 키워드는 단어 경계 사용
+    const isSpecialChar = /^[+\-*/=]$/.test(keyword);
+    const regex = isSpecialChar 
+      ? new RegExp(escapedKeyword, 'g')
+      : new RegExp(`\\b${escapedKeyword}\\b`, 'g');
+    
     blankedCode = blankedCode.replace(regex, placeholder);
   });
   
@@ -390,13 +405,16 @@ async function generateBlockCodingProblem({ level = 0, topic = 'basic', language
     // 3. 레벨별 블랭크 개수에 맞게 키워드 선택
     let blankCount = getBlankCount(level);
     
-    // 레벨 0, 1에 대한 엄격한 검증
+    // 레벨 0, 1, 2에 대한 엄격한 검증
     if (level === 0 && blankCount !== 1) {
       console.warn(`Level 0 must have exactly 1 blank, but got ${blankCount}. Forcing to 1.`);
       blankCount = 1;
     } else if (level === 1 && blankCount !== 2) {
       console.warn(`Level 1 must have exactly 2 blanks, but got ${blankCount}. Forcing to 2.`);
       blankCount = 2;
+    } else if (level === 2 && blankCount !== 3) {
+      console.warn(`Level 2 must have exactly 3 blanks, but got ${blankCount}. Forcing to 3.`);
+      blankCount = 3;
     }
     
     const keywordsToBlank = selectRandomKeywords(keywordCandidates, blankCount);

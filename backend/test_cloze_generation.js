@@ -41,12 +41,16 @@ async function testClozeGeneration() {
       console.log(`- 빈칸과 플레이스홀더 개수 일치: ${problem.blanks.length === (problem.code.match(/__\d+__/g) || []).length ? '✅' : '❌'}`);
       
       // 레벨별 빈칸 개수 확인
-      if (testCase.level >= 2 && testCase.level <= 3) {
-        const expectedMinBlanks = 2;
-        const expectedMaxBlanks = 4;
+      if (testCase.level === 2) {
+        const expectedBlanks = 1;
         const blankCount = problem.blanks.length;
-        const isInRange = blankCount >= expectedMinBlanks && blankCount <= expectedMaxBlanks;
-        console.log(`- 레벨 ${testCase.level} 적절한 빈칸 개수 (${expectedMinBlanks}-${expectedMaxBlanks}): ${isInRange ? '✅' : '❌'} (${blankCount}개)`);
+        const isCorrect = blankCount === expectedBlanks;
+        console.log(`- 레벨 2 정확한 빈칸 개수 (${expectedBlanks}개): ${isCorrect ? '✅' : '❌'} (${blankCount}개)`);
+      } else if (testCase.level === 3) {
+        const expectedBlanks = 2;
+        const blankCount = problem.blanks.length;
+        const isCorrect = blankCount === expectedBlanks;
+        console.log(`- 레벨 3 정확한 빈칸 개수 (${expectedBlanks}개): ${isCorrect ? '✅' : '❌'} (${blankCount}개)`);
       }
       
     } catch (error) {

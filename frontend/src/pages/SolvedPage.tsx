@@ -1,29 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import GradingService from "../services/gradingService";
 
-// ===== client id =====
-const getClientId = (): string => {
-  const KEY = "gpters.clientId";
-  const stored =
-    typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
-  if (stored) return stored;
-
-  const rand = (n = 8) =>
-    Math.random()
-      .toString(36)
-      .slice(2, 2 + n);
-  // globalThis.crypto?.randomUUID() 가 있으면 사용, 없으면 fallback
-  const newId =
-    (typeof globalThis !== "undefined" &&
-      (globalThis as any).crypto?.randomUUID?.()) ||
-    `${rand(6)}-${Date.now().toString(36)}-${rand(6)}`;
-
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem(KEY, newId); // newId는 string 확정
-  }
-  return newId;
-};
-
-const CLIENT_ID = getClientId(); // eslint-disable-line @typescript-eslint/no-unused-vars
+// ===== client id ===== (Not used in current implementation)
+// const getClientId = (): string => {
+//   const KEY = "gpters.clientId";
+//   const stored =
+//     typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
+//   if (stored) return stored;
+//
+//   const rand = (n = 8) =>
+//     Math.random()
+//       .toString(36)
+//       .slice(2, 2 + n);
+//   // globalThis.crypto?.randomUUID() 가 있으면 사용, 없으면 fallback
+//   const newId =
+//     (typeof globalThis !== "undefined" &&
+//       (globalThis as any).crypto?.randomUUID?.()) ||
+//     `${rand(6)}-${Date.now().toString(36)}-${rand(6)}`;
+//
+//   if (typeof localStorage !== "undefined") {
+//     localStorage.setItem(KEY, newId); // newId는 string 확정
+//   }
+//   return newId;
+// };
+//
+// const CLIENT_ID = getClientId(); // Not used in current implementation
 
 // 구문 강조 컴포넌트
 const SyntaxHighlight = ({ code }: { code: string }) => {
@@ -179,6 +181,7 @@ const SyntaxHighlight = ({ code }: { code: string }) => {
 // 문제 타입 정의 (SolvePage.tsx와 동일하게 확장)
 type Blank = { id: number | string; hint?: string; answer?: string };
 type Example = { input: string; output: string; explanation?: string };
+type Solution = { placeholder: string; answer: string; hint?: string };
 type Problem = {
   id?: number;
   title: string;
@@ -191,28 +194,60 @@ type Problem = {
   examples?: Example[];
   code?: string;
   blanks?: Blank[];
+  solutions?: Solution[];
   level?: number;
   topic?: string;
   language?: string;
   // 블록코딩 관련 필드
   blankedCode?: string;
+  templateCode?: string;
   blocks?: Array<{
-    id: number;
+    id: string | number;
     text: string;
     type: 'answer' | 'distractor';
   }>;
   blankCount?: number;
 };
 
+// 채점 결과 타입
+type GradingResult = {
+  isCorrect: boolean;
+  score: number;
+  totalBlanks: number;
+  correctBlanks: number;
+  details: Array<{
+    blankId: number;
+    userAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+  }>;
+};
+
 export default function SolvedPage() {
+  const { user } = useAuth(); // 사용자 정보 가져오기
   const [uiLevel, setUiLevel] = useState<number>(2); // 0-5
   const [language, setLanguage] = useState<string>("javascript");
   const [loading, setLoading] = useState<boolean>(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string>("");
+  const [startTime, setStartTime] = useState<number>(0); // 문제 시작 시간
+  
+  // 모달 관련 상태
+  const [showResultModal, setShowResultModal] = useState<boolean>(false);
+  const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
 
-  // 문제 생성 함수 (SolvePage.tsx의 fetchProblem 로직 적용)
+  // 사용자 레벨에 맞춰 UI Level 자동 설정
+  useEffect(() => {
+    if (user?.current_level !== undefined && user?.current_level !== null) {
+      // 사용자 레벨을 0-5 범위로 제한
+      const userLevel = Math.max(0, Math.min(5, user.current_level));
+      setUiLevel(userLevel);
+      console.log(`사용자 레벨 ${user.current_level}에 맞춰 UI Level을 ${userLevel}로 설정`);
+    }
+  }, [user?.current_level]);
+
+  // 문제 생성 함수 - 모든 레벨에서 블록코딩 API 사용, UI만 다르게
   const handleGenerateProblem = async () => {
     try {
       setLoading(true);
@@ -220,7 +255,7 @@ export default function SolvedPage() {
       const topics = ["graph", "dp", "greedy", "tree", "string", "math"];
       const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
-      // UI Level을 기준으로 문제 생성 (사용자 레벨 대신 UI Level 사용)
+      // UI Level을 기준으로 문제 생성
       const targetLevel = uiLevel;
 
       const params = {
@@ -229,8 +264,8 @@ export default function SolvedPage() {
         language: language,
       };
 
-      // 레벨 0~1은 블록코딩 API 사용, 나머지는 기존 API 사용
-      const apiEndpoint = targetLevel <= 1 ? "/api/block-coding/generate" : "/api/problem-bank/generate";
+      // 모든 레벨에서 블록코딩 API 사용 (UI만 레벨에 따라 다름)
+      const apiEndpoint = "/api/block-coding/generate";
       
       const res = await fetch(apiEndpoint, {
         method: "POST",
@@ -241,11 +276,12 @@ export default function SolvedPage() {
       if (!res.ok) throw new Error(await res.text());
       
       const response = await res.json();
-      // 블록코딩 API 응답 구조: { success: true, data: problem }
-      const problemData: Problem = targetLevel <= 1 ? response.data : response;
+      // 블록코딩 API 응답: { success: true, data: problem }
+      const problemData: Problem = response.data;
       
       setProblem(problemData);
       setUserAnswers({});
+      setStartTime(Date.now()); // 문제 시작 시간 기록
       
     } catch (error: any) {
       setErr(String(error?.message || error));
@@ -255,7 +291,15 @@ export default function SolvedPage() {
     }
   };
 
-  // 드래그 앤 드롭 핸들러
+  // 직접 입력 핸들러 (레벨 3-5용)
+  const handleInputChange = (blankId: number, value: string) => {
+    setUserAnswers(prev => ({
+      ...prev,
+      [blankId]: value
+    }));
+  };
+
+  // 드래그 앤 드롭 핸들러 (레벨 0-2용)
   const handleDrop = (blankId: number, blockText: string) => {
     setUserAnswers(prev => ({
       ...prev,
@@ -272,57 +316,89 @@ export default function SolvedPage() {
     });
   };
 
-  // 제출하기 (SolvePage.tsx의 블록코딩 제출 로직 적용)
+  // 제출하기 - 실제 채점 API 사용
   const handleSubmit = async () => {
     if (!problem) return;
     
-    // UI Level에 따른 제출 로직 분기
-    if (uiLevel <= 1) {
-      // 블록코딩 제출 로직
-      const blankCount = problem.blankCount || 1;
-      const userAnswersArray = [];
-      
-      for (let i = 1; i <= blankCount; i++) {
-        userAnswersArray.push(userAnswers[i] || "");
-      }
-      
-      if (
-        userAnswersArray.some((answer) => !answer) &&
-        !confirm("빈칸이 비어 있습니다. 제출할까요?")
-      ) {
-        return;
-      }
-      
-      const body = {
-        problem,
-        userAnswers: userAnswersArray
-      };
-      
-      try {
-        const r = await fetch("/api/block-coding/validate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!r.ok) throw new Error(await r.text());
-        const result = await r.json();
-        alert(JSON.stringify(result.data, null, 2));
-      } catch (error: any) {
-        alert("제출 오류: " + (error?.message || error));
-      }
-    } else {
-      // 기존 제출 로직 (빈칸채우기/에디터)
-      const filledBlanks = Object.keys(userAnswers).length;
-      const expectedBlanks = problem.blankCount || problem.blanks?.length || 1;
-      
-      if (filledBlanks < expectedBlanks) {
-        alert("모든 빈칸을 채워주세요!");
-        return;
-      }
-      
-      // 여기서 실제 제출 로직 구현 (추후 확장 가능)
-      alert(`제출 완료!\n답안: ${JSON.stringify(userAnswers, null, 2)}`);
+    const blankCount = problem.blankCount || problem.blanks?.length || 1;
+    const userAnswersArray: string[] = [];
+    
+    for (let i = 1; i <= blankCount; i++) {
+      userAnswersArray.push(userAnswers[i] || "");
     }
+    
+    if (
+      userAnswersArray.some((answer) => !answer) &&
+      !confirm("빈칸이 비어 있습니다. 제출할까요?")
+    ) {
+      return;
+    }
+    
+    try {
+      // GradingService를 사용하여 실제 채점 (userId 포함)
+      const userId = user?.id?.toString();
+      const timeSpent = startTime > 0 ? Math.floor((Date.now() - startTime) / 1000) : 0; // 초 단위
+      
+      console.log('[SolvedPage] 채점 제출:', {
+        userId,
+        problemTitle: problem.title,
+        userAnswersCount: userAnswersArray.length,
+        timeSpent: `${timeSpent}초`
+      });
+      
+      const result: any = await GradingService.gradeClozeTest(
+        problem,
+        userAnswersArray,
+        problem.level || uiLevel,
+        userId,
+        timeSpent
+      );
+      
+      if (result.success) {
+        // API 응답을 GradingResult 형식으로 변환
+        const gradingData: GradingResult = {
+          isCorrect: result.isCorrect,
+          score: result.score,
+          totalBlanks: result.totalCount || blankCount,
+          correctBlanks: result.correctCount || 0,
+          details: (result.results || []).map((r: any, idx: number) => ({
+            blankId: idx + 1,
+            userAnswer: userAnswersArray[idx] || "",
+            correctAnswer: r.correctAnswer || r.expected || "",
+            isCorrect: r.isCorrect || false
+          }))
+        };
+        
+        setGradingResult(gradingData);
+        setShowResultModal(true);
+        
+        console.log('[SolvedPage] 채점 성공:', {
+          score: result.score,
+          isCorrect: result.isCorrect,
+          experience: result.experience
+        });
+      } else {
+        throw new Error(result.error || '채점에 실패했습니다');
+      }
+      
+    } catch (error: any) {
+      console.error("[SolvedPage] 채점 오류:", error);
+      alert(`채점 중 오류가 발생했습니다: ${error.message}`);
+    }
+  };
+  
+  // 다시 풀기
+  const handleRetry = () => {
+    setUserAnswers({});
+    setShowResultModal(false);
+    setGradingResult(null);
+  };
+  
+  // 새 문제 생성
+  const handleNewProblem = () => {
+    setShowResultModal(false);
+    setGradingResult(null);
+    handleGenerateProblem();
   };
 
   return (
@@ -366,7 +442,12 @@ export default function SolvedPage() {
                       </div>
                     </div>
                     <small className="text-muted">
-                      0-1: 블록 / 2-3: 빈칸 / 4-5: 에디터
+                      0-2: 드래그 앤 드롭 / 3-5: 키보드 직접 입력
+                      {user && (
+                        <span className="ms-2 text-primary fw-semibold">
+                          (내 레벨: {user.current_level ?? 0})
+                        </span>
+                      )}
                     </small>
                   </div>
 
@@ -480,71 +561,116 @@ export default function SolvedPage() {
 
                   {/* 1) 코드에 빈칸 채우기 */}
                   <div className="p-4 bg-white">
-                    <h4 className="text-dark mb-3 fw-bold">1) 코드에 빈칸 채우기</h4>
+                    <h4 className="text-dark mb-3 fw-bold">
+                      1) 코드에 빈칸 채우기
+                      <small className="ms-2 text-muted" style={{ fontSize: '0.9rem' }}>
+                        {uiLevel <= 2 ? '(드래그 앤 드롭)' : '(직접 입력)'}
+                      </small>
+                    </h4>
                     <div className="bg-dark rounded p-3" style={{ borderRadius: "15px", fontFamily: "monospace" }}>
                       <pre className="text-light mb-0" style={{ fontSize: "14px", lineHeight: "1.5" }}>
                         <code>
-                          {(problem.blankedCode || problem.code || "").split(/(BLANK_\d+)/).map((part, index) => {
+                          {(problem.blankedCode || problem.templateCode || problem.code || "").split(/(BLANK_\d+)/).map((part: string, index: number) => {
                             if (part.startsWith('BLANK_')) {
                               const blankId = parseInt(part.replace('BLANK_', ''));
-                              return (
-                                <span
-                                  key={index}
-                                  className="d-inline-block"
-                                  style={{
-                                    background: "#4a5568",
-                                    border: "2px dashed #718096",
-                                    borderRadius: "6px",
-                                    padding: "4px 16px",
-                                    margin: "0 4px",
-                                    minWidth: "120px",
-                                    textAlign: "center",
-                                    color: "#e2e8f0",
-                                    fontSize: "13px",
-                                    fontWeight: "500",
-                                    letterSpacing: "0.5px",
-                                    cursor: "pointer",
-                                    transition: "all 0.2s ease"
-                                  }}
-                                  onDrop={(e) => {
-                                    e.preventDefault();
-                                    const blockText = e.dataTransfer.getData("text/plain");
-                                    if (blockText) handleDrop(blankId, blockText);
-                                  }}
-                                  onDragOver={(e) => {
-                                    e.preventDefault();
-                                    e.currentTarget.style.background = "#5a6578";
-                                    e.currentTarget.style.borderColor = "#a0aec0";
-                                  }}
-                                  onDragLeave={(e) => {
-                                    e.currentTarget.style.background = "#4a5568";
-                                    e.currentTarget.style.borderColor = "#718096";
-                                  }}
-                                >
-                                  {userAnswers[blankId] ? (
-                                    <>
-                                      <span style={{ color: "#90cdf4" }}>{userAnswers[blankId]}</span>
-                                      <button 
-                                        onClick={() => clearBlank(blankId)}
-                                        className="btn btn-sm ms-2"
-                                        style={{ 
-                                          fontSize: "12px", 
-                                          padding: "0 4px", 
-                                          border: "1px solid #718096", 
-                                          background: "#2d3748",
-                                          color: "#e2e8f0",
-                                          borderRadius: "3px",
-                                          lineHeight: "1"
-                                        }}
-                                      >
-                                        ×
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <span style={{ color: "#a0aec0", fontStyle: "italic" }}>BLANK</span>
-                                  )}
-                                </span>
-                              );
+                              
+                              // 레벨 0-2: 드래그 앤 드롭 영역
+                              if (uiLevel <= 2) {
+                                return (
+                                  <span
+                                    key={index}
+                                    className="d-inline-block"
+                                    style={{
+                                      background: "#4a5568",
+                                      border: "2px dashed #718096",
+                                      borderRadius: "6px",
+                                      padding: "4px 16px",
+                                      margin: "0 4px",
+                                      minWidth: "120px",
+                                      textAlign: "center",
+                                      color: "#e2e8f0",
+                                      fontSize: "13px",
+                                      fontWeight: "500",
+                                      letterSpacing: "0.5px",
+                                      cursor: "pointer",
+                                      transition: "all 0.2s ease"
+                                    }}
+                                    onDrop={(e) => {
+                                      e.preventDefault();
+                                      const blockText = e.dataTransfer.getData("text/plain");
+                                      if (blockText) handleDrop(blankId, blockText);
+                                    }}
+                                    onDragOver={(e) => {
+                                      e.preventDefault();
+                                      e.currentTarget.style.background = "#5a6578";
+                                      e.currentTarget.style.borderColor = "#a0aec0";
+                                    }}
+                                    onDragLeave={(e) => {
+                                      e.currentTarget.style.background = "#4a5568";
+                                      e.currentTarget.style.borderColor = "#718096";
+                                    }}
+                                  >
+                                    {userAnswers[blankId] ? (
+                                      <>
+                                        <span style={{ color: "#90cdf4" }}>{userAnswers[blankId]}</span>
+                                        <button 
+                                          onClick={() => clearBlank(blankId)}
+                                          className="btn btn-sm ms-2"
+                                          style={{ 
+                                            fontSize: "12px", 
+                                            padding: "0 4px", 
+                                            border: "1px solid #718096", 
+                                            background: "#2d3748",
+                                            color: "#e2e8f0",
+                                            borderRadius: "3px",
+                                            lineHeight: "1"
+                                          }}
+                                        >
+                                          ×
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <span style={{ color: "#a0aec0", fontStyle: "italic" }}>BLANK</span>
+                                    )}
+                                  </span>
+                                );
+                              } 
+                              // 레벨 3-5: 직접 입력 필드
+                              else {
+                                return (
+                                  <input
+                                    key={index}
+                                    type="text"
+                                    className="d-inline-block"
+                                    value={userAnswers[blankId] || ""}
+                                    onChange={(e) => handleInputChange(blankId, e.target.value)}
+                                    placeholder={`빈칸 ${blankId}`}
+                                    style={{
+                                      background: "#4a5568",
+                                      border: "2px solid #718096",
+                                      borderRadius: "6px",
+                                      padding: "4px 12px",
+                                      margin: "0 4px",
+                                      minWidth: "100px",
+                                      maxWidth: "150px",
+                                      textAlign: "center",
+                                      color: "#90cdf4",
+                                      fontSize: "13px",
+                                      fontWeight: "500",
+                                      outline: "none",
+                                      fontFamily: "monospace"
+                                    }}
+                                    onFocus={(e) => {
+                                      e.currentTarget.style.borderColor = "#a0aec0";
+                                      e.currentTarget.style.background = "#5a6578";
+                                    }}
+                                    onBlur={(e) => {
+                                      e.currentTarget.style.borderColor = "#718096";
+                                      e.currentTarget.style.background = "#4a5568";
+                                    }}
+                                  />
+                                );
+                              }
                             }
                             return <SyntaxHighlight key={index} code={part} />;
                           })}
@@ -553,51 +679,55 @@ export default function SolvedPage() {
                     </div>
                   </div>
 
-                  {/* 2) 드래그할 블록들 */}
-                  <div className="p-4 bg-white">
-                    <h4 className="text-dark mb-3 fw-bold">2) 드래그할 블록들</h4>
-                    <div className="d-flex flex-wrap gap-2">
-                      {(problem.blocks || []).length > 0 ? (
-                        problem.blocks!.map((block) => (
-                          <div
-                            key={block.id}
-                            draggable
-                            onDragStart={(e) => {
-                              e.dataTransfer.setData("text/plain", block.text);
-                            }}
-                            className="btn"
-                            style={{
-                              background: block.type === 'answer' 
-                                ? "linear-gradient(180deg, #EEF2FF 0%, #E0E7FF 100%)"
-                                : "linear-gradient(180deg, #FFF1F1 0%, #FFE5E5 100%)",
-                              border: block.type === 'answer' ? "2px solid #7C83FF" : "2px solid #FF6B6B",
-                              borderRadius: "12px",
-                              color: block.type === 'answer' ? "#1e1b4b" : "#7F1D1D",
-                              fontWeight: "600",
-                              cursor: "grab",
-                              userSelect: "none"
-                            }}
-                            onMouseDown={(e) => e.currentTarget.style.cursor = "grabbing"}
-                            onMouseUp={(e) => e.currentTarget.style.cursor = "grab"}
-                          >
-                            {block.text}
-                          </div>
-                        ))
-                      ) : (
-                        <span className="text-muted">블록이 없습니다.</span>
+                  {/* 2) 드래그할 블록들 (레벨 0-2만 표시) */}
+                  {uiLevel <= 2 && (
+                    <div className="p-4 bg-white">
+                      <h4 className="text-dark mb-3 fw-bold">2) 드래그할 블록들</h4>
+                      <div className="d-flex flex-wrap gap-2">
+                        {(problem.blocks || []).length > 0 ? (
+                          problem.blocks!.map((block) => (
+                            <div
+                              key={block.id}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData("text/plain", block.text);
+                              }}
+                              className="btn"
+                              style={{
+                                background: block.type === 'answer' 
+                                  ? "linear-gradient(180deg, #EEF2FF 0%, #E0E7FF 100%)"
+                                  : "linear-gradient(180deg, #FFF1F1 0%, #FFE5E5 100%)",
+                                border: block.type === 'answer' ? "2px solid #7C83FF" : "2px solid #FF6B6B",
+                                borderRadius: "12px",
+                                color: block.type === 'answer' ? "#1e1b4b" : "#7F1D1D",
+                                fontWeight: "600",
+                                cursor: "grab",
+                                userSelect: "none"
+                              }}
+                              onMouseDown={(e) => e.currentTarget.style.cursor = "grabbing"}
+                              onMouseUp={(e) => e.currentTarget.style.cursor = "grab"}
+                            >
+                              {block.text}
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-muted">블록이 없습니다.</span>
+                        )}
+                      </div>
+                      {(problem.blocks || []).length > 0 && (
+                        <div className="mt-2 text-muted small">
+                          정답 블록: {problem.blocks!.filter(b => b.type === 'answer').length}개 | 
+                          오답 블록: {problem.blocks!.filter(b => b.type === 'distractor').length}개
+                        </div>
                       )}
                     </div>
-                    {(problem.blocks || []).length > 0 && (
-                      <div className="mt-2 text-muted small">
-                        정답 블록: {problem.blocks!.filter(b => b.type === 'answer').length}개 | 
-                        오답 블록: {problem.blocks!.filter(b => b.type === 'distractor').length}개
-                      </div>
-                    )}
-                  </div>
+                  )}
 
-                  {/* 3) 제출하기 */}
+                  {/* 제출하기 */}
                   <div className="p-4 bg-light" style={{ borderTop: "1px solid #e9ecef" }}>
-                    <h4 className="text-dark mb-3 fw-bold">3) 제출하기</h4>
+                    <h4 className="text-dark mb-3 fw-bold">
+                      {uiLevel <= 2 ? '3)' : '2)'} 제출하기
+                    </h4>
                     <button
                       onClick={handleSubmit}
                       className="btn btn-primary btn-lg px-4 py-2"
@@ -618,6 +748,151 @@ export default function SolvedPage() {
           </div>
         </div>
       </div>
+
+      {/* 채점 결과 모달 */}
+      {showResultModal && gradingResult && (
+        <div 
+          className="modal show d-block" 
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowResultModal(false)}
+        >
+          <div 
+            className="modal-dialog modal-dialog-centered modal-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content" style={{ borderRadius: '20px', border: 'none', overflow: 'hidden' }}>
+              
+              {/* 모달 헤더 */}
+              <div 
+                className="modal-header border-0 p-4"
+                style={{
+                  background: gradingResult.isCorrect 
+                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                    : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                  color: 'white'
+                }}
+              >
+                <div className="w-100 text-center">
+                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>
+                    {gradingResult.isCorrect ? '🎉' : '💪'}
+                  </div>
+                  <h3 className="modal-title fw-bold mb-2">
+                    {gradingResult.isCorrect ? '정답입니다!' : '아쉽네요!'}
+                  </h3>
+                  <h1 className="display-3 fw-bold mb-0">
+                    {gradingResult.score}점
+                  </h1>
+                  <p className="mb-0 mt-2" style={{ fontSize: '1.1rem' }}>
+                    {gradingResult.correctBlanks} / {gradingResult.totalBlanks} 정답
+                  </p>
+                </div>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => setShowResultModal(false)}
+                  style={{ position: 'absolute', right: '1rem', top: '1rem' }}
+                ></button>
+              </div>
+
+              {/* 모달 바디 */}
+              <div className="modal-body p-4">
+                <h5 className="fw-bold mb-3 text-dark">상세 결과</h5>
+                
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead>
+                      <tr>
+                        <th className="text-center" style={{ width: '80px' }}>빈칸</th>
+                        <th className="text-center" style={{ width: '80px' }}>결과</th>
+                        <th>내 답안</th>
+                        <th>정답</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gradingResult.details.map((detail) => (
+                        <tr key={detail.blankId} className={detail.isCorrect ? 'table-success' : 'table-danger'}>
+                          <td className="text-center fw-bold">
+                            #{detail.blankId}
+                          </td>
+                          <td className="text-center">
+                            <span style={{ fontSize: '1.5rem' }}>
+                              {detail.isCorrect ? '✓' : '✗'}
+                            </span>
+                          </td>
+                          <td>
+                            <code 
+                              className="px-2 py-1 rounded"
+                              style={{
+                                background: detail.isCorrect ? '#d1e7dd' : '#f8d7da',
+                                color: detail.isCorrect ? '#0a3622' : '#58151c',
+                                fontFamily: 'monospace'
+                              }}
+                            >
+                              {detail.userAnswer || '(비어있음)'}
+                            </code>
+                          </td>
+                          <td>
+                            <code 
+                              className="px-2 py-1 rounded"
+                              style={{
+                                background: '#e7f1ff',
+                                color: '#004085',
+                                fontFamily: 'monospace'
+                              }}
+                            >
+                              {detail.correctAnswer}
+                            </code>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {!gradingResult.isCorrect && (
+                  <div className="alert alert-info mt-3" style={{ borderRadius: '12px' }}>
+                    <i className="bi bi-lightbulb-fill me-2"></i>
+                    <strong>힌트:</strong> 틀린 부분을 다시 한 번 확인해보세요!
+                  </div>
+                )}
+              </div>
+
+              {/* 모달 푸터 */}
+              <div className="modal-footer border-0 p-4 bg-light">
+                <button 
+                  className="btn btn-lg px-4"
+                  onClick={handleRetry}
+                  style={{
+                    background: 'white',
+                    border: '2px solid #667eea',
+                    color: '#667eea',
+                    borderRadius: '12px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <i className="bi bi-arrow-clockwise me-2"></i>
+                  다시 풀기
+                </button>
+                <button 
+                  className="btn btn-lg px-4"
+                  onClick={handleNewProblem}
+                  style={{
+                    background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                    border: 'none',
+                    color: 'white',
+                    borderRadius: '12px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <i className="bi bi-plus-circle me-2"></i>
+                  새 문제
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -16,7 +16,11 @@ const {
   enforceLevel0Shape, 
   safeParse, 
   extractFirstJsonLike, 
-  normalizeJsPlaceholders 
+  normalizeJsPlaceholders,
+  enforceClozeShape,
+  getBlankCandidates,
+  LEVEL2_CANDIDATES,
+  LEVEL3_CANDIDATES
 } = require('./openaiCloze');
 
 // 블록코딩 전용 함수들 import
@@ -92,7 +96,9 @@ function buildSystemPrompt(language) {
     'BLANK GUIDELINES BY DIFFICULTY:',
     '- Level 0: CRITICAL RULE - Use EXACTLY 2 blanks. Each blank must be ONE SINGLE WORD only (examples: x, y, let, const, +, -, console, log). NEVER use phrases like "fruit.quantity" or "if (condition)" or "totalFruits += fruit.quantity". ONLY simple words like "let" or "x" or "+".',
     '- Level 1: Use EXACTLY 3 blanks, each blank must be ONE SINGLE WORD only (like: x, +, print, if, for). NO phrases, NO expressions, ONLY individual words.',
-    '- Level 2-5: Use 2-4 blanks, each blank must be ONE SINGLE WORD only. Create varied scenarios: basic arithmetic, simple loops, variable assignments, basic conditionals, simple function calls.',
+    '- Level 3: Use EXACTLY 1 blank, focus on meaningful programming keywords and methods (like "length", "map", "sum", "result").',
+    '- Level 4: Use EXACTLY 2 blanks, focus on meaningful programming keywords and methods (like "filter", "push", "response", "data").',
+    '- Level 5: Use EXACTLY 3 blanks, focus on meaningful programming keywords and methods (like "querySelector", "addEventListener", "fetch", "then").',
     '- Level 6-15: Use 3-4 blanks, mix of single words and short expressions',
     '- Level 16-25: Use 4-6 blanks, include longer expressions and logic',
     '- Level 26-30: Use 5-8 blanks, complex expressions and advanced concepts',
@@ -125,8 +131,12 @@ function userPayload({ level, topic, language }) {
     blankGuidance = `CRITICAL: Use EXACTLY 2 blanks - not 1, not 3, EXACTLY 2! Each blank must be ONE SINGLE WORD ONLY appropriate for ${language}. Examples of VALID ${language} words: ${langExamples}. DO NOT use keywords from other languages (no Python 'pass' in JavaScript, no JavaScript 'console' in Python). Examples of INVALID: "fruit.quantity", "if (N >= fruit.price)", "totalFruits += fruit.quantity". ONLY use ONE WORD per blank like "let", "x", "+", "console", "log". Create the SIMPLEST possible ${language} problem with exactly 2 single-word blanks.`;
   } else if (level === 1) {
     blankGuidance = `Use EXACTLY 3 blanks. Each blank must be ONE SINGLE WORD ONLY (${langExamples}). NO phrases like "x + 1" or "print(x)". ONLY individual words appropriate for ${language}. Create slightly more complex problems than level 0.`;
-  } else if (level <= 5) {
-    blankGuidance = `Use 2-4 blanks. Each blank must be ONE SINGLE WORD ONLY (${langExamples}). NO phrases like "x + 1" or "print(x)". ONLY individual words appropriate for ${language}. Vary the problem type: arithmetic calculations, simple loops, variable assignments, basic conditionals, or simple function calls. Make each problem unique and different from typical examples.`;
+  } else if (level === 3) {
+    blankGuidance = `Use EXACTLY 1 blank. Focus on meaningful programming keywords and methods (like "length", "map", "sum", "result"). Create problems that teach core programming concepts through key identifiers.`;
+  } else if (level === 4) {
+    blankGuidance = `Use EXACTLY 2 blanks. Focus on meaningful programming keywords and methods (like "filter", "push", "response", "data"). Prefer method chaining patterns when possible (object.method). Create problems that teach core programming concepts.`;
+  } else if (level === 5) {
+    blankGuidance = `Use EXACTLY 3 blanks. Focus on meaningful programming keywords and methods (like "querySelector", "addEventListener", "fetch", "then"). Create problems involving loops, conditionals, or multi-step algorithms.`;
   } else if (level <= 15) {
     blankGuidance = 'Use 3-4 blanks with mix of single words and short expressions.';
   } else if (level <= 25) {
@@ -142,15 +152,17 @@ function userPayload({ level, topic, language }) {
 }
 
 async function generateProblem({ level = 10, topic = 'graph', language = 'python', recentTitles = [], problemType = 'cloze' }) {
-  // 함수 호출 시점에 환경 변수 다시 확인
-  console.log('🔍 generateProblem 호출 시점 API 키 확인:', OPENAI_API_KEY ? 'Found' : 'Missing');
+  console.log(`[DEBUG] generateProblem 호출됨 - 레벨: ${level}, problemType: ${problemType}`);
+  
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing');
 
-  // 레벨 0~1은 블록코딩 문제로 생성
-  if (level <= 1 && problemType !== 'cloze') {
-    console.log(`Level ${level} detected - using block coding generation`);
-    return await generateBlockCodingProblem({ level, topic, language });
+  // 레벨 3-5는 특화된 generateCloze 함수 사용 (키워드/메소드 방식)
+  if (level >= 3 && level <= 5) {
+    console.log(`[DEBUG] Level ${level} detected - using specialized generateCloze function`);
+    return await generateCloze({ level, topic, language, locale: 'ko' });
   }
+
+  console.log(`[DEBUG] Level ${level} detected - using regular cloze generation`);
 
   const system = buildSystemPrompt(language);
   
@@ -194,20 +206,26 @@ async function generateProblem({ level = 10, topic = 'graph', language = 'python
   if (!Array.isArray(data.examples) || !Array.isArray(data.blanks)) throw new Error('examples/blanks must be arrays');
   
   // 레벨별 블록 개수 강제 검증
+  // 레벨 0-2는 블록코딩 시스템을 사용하므로 여기서는 검증하지 않음
   if (level === 0 && data.blanks.length !== 2) {
     throw new Error(`Level 0 must have exactly 2 blanks, got ${data.blanks.length}`);
   } else if (level === 1 && data.blanks.length !== 3) {
     throw new Error(`Level 1 must have exactly 3 blanks, got ${data.blanks.length}`);
-  } else if (level >= 2 && level <= 5 && (data.blanks.length < 2 || data.blanks.length > 4)) {
-    throw new Error(`Level ${level} must have 2-4 blanks, got ${data.blanks.length}`);
+  } else if (level === 3 && data.blanks.length !== 1) {
+    throw new Error(`Level 3 must have exactly 1 blank, got ${data.blanks.length}`);
+  } else if (level === 4 && data.blanks.length !== 2) {
+    throw new Error(`Level 4 must have exactly 2 blanks, got ${data.blanks.length}`);
+  } else if (level === 5 && data.blanks.length !== 3) {
+    throw new Error(`Level 5 must have exactly 3 blanks, got ${data.blanks.length}`);
   }
 
   data.blanks = data.blanks.map((b, i) => {
     const n = Number(String(b.id ?? (i + 1)).toString().replace(/\D/g, '')) || (i + 1);
     let answer = String(b.answer ?? '').trim();
     
-    // 레벨 0-5에서는 단어가 단일 단어인지 검증
-    if (level <= 5) {
+    // 레벨 0-1에서는 단어가 단일 단어인지 검증, 레벨 3-5는 키워드/메소드 허용
+    // 레벨 2는 블록코딩 시스템 사용
+    if (level <= 1) {
       // 공백, 특수문자, 괄호 등이 포함되어 있으면 첫 번째 단어만 추출
       const singleWord = answer.split(/[\s\(\)\[\]\{\}\+\-\*\/\=\<\>\!\&\|\,\.]+/)[0];
       if (singleWord && singleWord !== answer) {
@@ -215,8 +233,8 @@ async function generateProblem({ level = 10, topic = 'graph', language = 'python
         answer = singleWord;
       }
       
-      // 레벨 0에서는 특히 엄격하게 검증
-      if (level === 0) {
+      // 레벨 0-1에서는 특히 엄격하게 검증
+      if (level <= 1) {
         // 언어별 허용된 단어만 사용
         let allowedWords = [];
         if (language === 'javascript') {
@@ -283,21 +301,44 @@ async function generateProblem({ level = 10, topic = 'graph', language = 'python
   };
 }
 
+
 async function generateCloze({ level, topic, language, locale }) {
+  console.log(`[DEBUG] generateCloze 함수 시작 - level: ${level}, topic: ${topic}, language: ${language}`);
+  
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing');
 
   const isKorean = (locale || process.env.PROBLEM_LOCALE || 'ko').toLowerCase().startsWith('ko');
   const progLang = (language || 'python').toLowerCase();
 
+  // 레벨별 블랭크 후보 목록 가져오기
+  const candidates = getBlankCandidates(level);
+  
+  // 레벨별 블랭크 개수 및 가이드
+  const blankConfig = {
+    3: { count: 1, desc: '1 meaningful keyword/method' },
+    4: { count: 2, desc: '2 meaningful keywords/methods' },
+    5: { count: 3, desc: '3 meaningful keywords/methods' }
+  };
+  const config = blankConfig[level] || blankConfig[3];
+  
+  // 레벨 3~5에 맞는 시스템 프롬프트
   const sys = [
-    "You are an algorithm problem generator. Return a SINGLE JSON object and nothing else.",
+    `You are an algorithm problem generator for Level ${level} problems. Return a SINGLE JSON object and nothing else.`,
     "Do NOT include Markdown fences, comments, or extra prose.",
     // 서술 언어
     isKorean
       ? "All natural-language fields (title, statement, input_spec, output_spec, constraints, examples[].explanation) MUST be in Korean."
       : "All natural-language fields MUST be in English.",
-    // 코드 & 플레이스홀더 규칙
-    "In field `code`, insert placeholders as plain tokens like __1__, __2__.",
+    "",
+    // 레벨별 핵심 규칙
+    `CRITICAL: Level ${level} requires EXACTLY ${config.count} blank(s) focusing on meaningful programming keywords/methods.`,
+    "Create blanks for essential methods (.length, .map, .push), properties (.value, .innerHTML), key variables (sum, result, count), or important keywords.",
+    "Each blank should represent a meaningful programming concept that helps learning.",
+    "",
+    // 플레이스홀더 규칙 (중요!)
+    `In field \`code\`, insert placeholders as plain tokens like __1__, __2__, __3__.`,
+    `CRITICAL: Each placeholder MUST appear EXACTLY ONCE in the code. Do NOT reuse the same placeholder number.`,
+    `For example: If you use __1__, it should appear only once in the entire code.`,
     "Placeholders MUST NOT appear inside quotes or comments.",
     "Keep code identifiers/keywords in English.",
     progLang === 'javascript'
@@ -310,6 +351,14 @@ async function generateCloze({ level, topic, language, locale }) {
     `level: ${level}`,
     `programming_language: ${progLang}`,
     `narrative_language: ${isKorean ? 'Korean' : 'English'}`,
+    "",
+    `Create a Level ${level} algorithm problem with EXACTLY ${config.count} meaningful blank(s).`,
+    `Each placeholder (__1__, __2__, __3__) must appear EXACTLY ONCE in the code.`,
+    "Focus on core algorithmic concepts like loops, conditionals, and data manipulation.",
+    "",
+    "Blank target examples:",
+    `- Use meaningful keywords like: ${candidates.slice(0, 15).join(', ')}, etc.`,
+    `- Focus on methods, properties, variables, or important programming concepts.`,
     "",
     // 스키마 설명
     "Return strict JSON with fields:",
@@ -328,7 +377,7 @@ async function generateCloze({ level, topic, language, locale }) {
   
   const body = {
     model: OPENAI_MODEL,
-    response_format: { type: 'json_object' },   // 지원 모델에서 JSON 강제
+    response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: sys },
       { role: 'user', content: user }
@@ -346,118 +395,23 @@ async function generateCloze({ level, topic, language, locale }) {
   if (!res.ok) throw new Error(`OpenAI ${res.status}\n${raw}`);
 
   const rawContent = JSON.parse(raw)?.choices?.[0]?.message?.content ?? "{}";
-  let parsed = safeParse(rawContent) || safeParse(extractFirstJsonLike(rawContent));
-  if (!parsed) throw new Error('Model did not return valid JSON');
+  const rawText = extractFirstJsonLike(rawContent);
+  let parsed = safeParse(rawText);
+  if (!parsed) throw new Error('OpenAI response not parseable');
 
-  if (progLang === 'javascript' && typeof parsed.code === 'string') {
-    parsed.code = normalizeJsPlaceholders(parsed.code);
-  }
+  // 레벨별 보정
+  parsed = enforceClozeShape(parsed, Number(level));
 
-  // 레벨0 규격 강제(빈칸 2개·1단어)
-  if (Number(level) === 0) {
-    parsed = enforceLevel0Shape(parsed);
-  }
-
-  let data = parsed;
-
-  const must = ['title','statement','input_spec','output_spec','examples','difficulty_level','code_template','blanks'];
-  for (const k of must) if (!(k in data)) throw new Error(`missing field: ${k}`);
-  if (!Array.isArray(data.examples) || !Array.isArray(data.blanks)) throw new Error('examples/blanks must be arrays');
-  
-  // 레벨별 블록 개수 강제 검증
-  if (level === 0 && data.blanks.length !== 2) {
-    throw new Error(`Level 0 must have exactly 2 blanks, got ${data.blanks.length}`);
-  } else if (level === 1 && data.blanks.length !== 3) {
-    throw new Error(`Level 1 must have exactly 3 blanks, got ${data.blanks.length}`);
-  } else if (level >= 2 && level <= 5 && (data.blanks.length < 2 || data.blanks.length > 4)) {
-    throw new Error(`Level ${level} must have 2-4 blanks, got ${data.blanks.length}`);
-  }
-
-  data.blanks = data.blanks.map((b, i) => {
-    const n = Number(String(b.id ?? (i + 1)).toString().replace(/\D/g, '')) || (i + 1);
-    let answer = String(b.answer ?? '').trim();
-    
-    // 레벨 0-5에서는 단어가 단일 단어인지 검증
-    if (level <= 5) {
-      // 공백, 특수문자, 괄호 등이 포함되어 있으면 첫 번째 단어만 추출
-      const singleWord = answer.split(/[\s\(\)\[\]\{\}\+\-\*\/\=\<\>\!\&\|\,\.]+/)[0];
-      if (singleWord && singleWord !== answer) {
-        console.log(`Level ${level}: Converting "${answer}" to single word "${singleWord}"`);
-        answer = singleWord;
-      }
-      
-      // 레벨 0에서는 특히 엄격하게 검증
-      if (level === 0) {
-        // 언어별 허용된 단어만 사용
-        let allowedWords = [];
-        if (language === 'javascript') {
-          allowedWords = ['let', 'const', 'var', 'x', 'y', 'z', 'a', 'b', 'console', 'log', 'if', 'for', 'while', 'function', '+', '-', '*', '/', '='];
-        } else if (language === 'python') {
-          allowedWords = ['x', 'y', 'z', 'a', 'b', 'print', 'input', 'if', 'for', 'while', 'def', 'return', '+', '-', '*', '/', '='];
-        } else {
-          allowedWords = ['x', 'y', 'z', 'a', 'b', 'if', 'for', 'while', '+', '-', '*', '/', '='];
-        }
-        
-        // 15자 이상이거나 허용되지 않은 단어면 교체
-        if (answer.length > 15 || !allowedWords.includes(answer.toLowerCase())) {
-          answer = allowedWords[i % allowedWords.length];
-          console.log(`Level 0: Replacing with language-appropriate "${answer}"`);
-        }
-      }
-    }
-    
-    return { id: n, answer, hint: String(b.hint ?? '') };
-  });
-
-  let code = String(data.code_template || '');
-  code = normalizePlaceholders(code, language, data.blanks.length);
-  const phCount = countPlaceholders(code);
-  
-  // placeholder와 blanks 개수가 맞지 않을 때 조정
-  if (phCount !== data.blanks.length) {
-    console.warn(`Placeholder count mismatch: placeholders(${phCount}) != blanks(${data.blanks.length})`);
-    
-    if (phCount > data.blanks.length) {
-      // placeholder가 더 많으면 blanks를 추가
-      const needed = phCount - data.blanks.length;
-      for (let i = 0; i < needed; i++) {
-        data.blanks.push({
-          id: data.blanks.length + i + 1,
-          answer: '???',
-          hint: '빈칸을 채우세요'
-        });
-      }
-    } else if (phCount < data.blanks.length) {
-      // blanks가 더 많으면 blanks를 줄임
-      data.blanks = data.blanks.slice(0, phCount);
-    }
-    
-    // 여전히 0개라면 최소 1개는 만들기
-    if (phCount === 0 && data.blanks.length === 0) {
-      code = code + '\n# __1__ # Complete this line';
-      data.blanks = [{ id: 1, answer: 'pass', hint: '구현을 완성하세요' }];
-    }
-  }
-
-  let result = {
-    title: String(data.title || '').slice(0, 255),
-    statement: String(data.statement || ''),
-    input_spec: String(data.input_spec || ''),
-    output_spec: String(data.output_spec || ''),
-    constraints: String(data.constraints || ''),
-    examples: data.examples,
-    level: Number(data.difficulty_level || level) || level,
-    language,
-    topic,
-    code,
-    blanks: data.blanks
+  // level, topic, language 필드 추가 (데이터베이스 저장을 위해 필수)
+  const result = {
+    ...parsed,
+    level: Number(level),
+    topic: String(topic),
+    language: String(language)
   };
-
-  // 유효성/후처리(기존) + 레벨0 강제 규칙
-  if (Number(level) === 0) {
-    result = enforceLevel0Shape(result);
-  }
-
+  
+  console.log(`[DEBUG] generateCloze 반환값:`, JSON.stringify(result, null, 2));
+  
   return result;
 }
 

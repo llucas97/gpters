@@ -14,7 +14,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
     "@monaco-editor/react": "^4.7.0",
+    "antd": "^5.27.6",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "date-fns": "^4.1.0",
