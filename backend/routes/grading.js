@@ -46,6 +46,12 @@ router.post('/grade', async (req, res) => {
     // 채점 결과를 데이터베이스에 저장
     if (response.success && req.body.userId) {
       try {
+        // 유효한 topic인지 검증
+        const validTopics = ['graph', 'dp', 'greedy', 'tree', 'string', 'math', 'sort', 'search', 'stack', 'queue', 'hash', 'heap', 'programming'];
+        const problemTopic = problem.topic && validTopics.includes(problem.topic) 
+          ? problem.topic 
+          : 'programming';
+        
         const saveData = {
           userId: req.body.userId,
           problemId: problem.id || req.body.problemId,
@@ -62,7 +68,7 @@ router.post('/grade', async (req, res) => {
           feedback: response.feedback,
           timeSpent: req.body.timeSpent,
           language: problem.language || 'javascript',
-          topic: problem.topic || 'programming'
+          topic: problemTopic
         };
         
         const saveResult = await GradingResultService.saveGradingResult(saveData);

@@ -31,9 +31,9 @@ router.post('/login', (req, res, next) => {
       
       // 사용자 정보 조회 및 응답
       db.User.findByPk(user.user_id, {
-        attributes: ['user_id', 'email', 'username', 'full_name', 'survey_completed']
+        attributes: ['user_id', 'email', 'username', 'full_name', 'survey_completed', 'current_level']
       }).then(userData => {
-        console.log(`✅ 로그인 성공: ${userData.email} (rememberMe: ${rememberMe}, maxAge: ${maxAge}ms)`);
+        console.log(`✅ 로그인 성공: ${userData.email} (rememberMe: ${rememberMe}, maxAge: ${maxAge}ms, level: ${userData.current_level})`);
         
         res.json({ 
           success: true, 
@@ -41,7 +41,8 @@ router.post('/login', (req, res, next) => {
             id: userData.user_id,
             email: userData.email,
             username: userData.username,
-            survey_completed: userData.survey_completed
+            survey_completed: userData.survey_completed,
+            current_level: userData.current_level
           }
         });
       }).catch(err => {

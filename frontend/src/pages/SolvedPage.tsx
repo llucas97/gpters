@@ -127,43 +127,54 @@ const SyntaxHighlight = ({ code }: { code: string }) => {
 
   const highlightKeywordsAndOperators = (text: string, key: string) => {
     const elements: React.ReactNode[] = [];
-    const words = text.split(/(\s+|[{}()\[\];,.])/);
     
-    words.forEach((word, index) => {
-      if (keywords.includes(word)) {
-        elements.push(
-          <span key={`${key}-keyword-${index}`} style={{ color: '#c586c0', fontWeight: 'bold' }}>
-            {word}
-          </span>
-        );
-      } else if (operators.includes(word)) {
-        elements.push(
-          <span key={`${key}-operator-${index}`} style={{ color: '#d4d4d4' }}>
-            {word}
-          </span>
-        );
-      } else if (punctuation.includes(word)) {
-        elements.push(
-          <span key={`${key}-punct-${index}`} style={{ color: '#ffd700' }}>
-            {word}
-          </span>
-        );
-      } else if (word.match(/^[a-zA-Z_$][a-zA-Z0-9_$]*$/)) {
-        // 변수명이나 함수명
-        elements.push(
-          <span key={`${key}-identifier-${index}`} style={{ color: '#9cdcfe' }}>
-            {word}
-          </span>
-        );
-      } else {
-        elements.push(
-          <span key={`${key}-text-${index}`} style={{ color: '#d4d4d4' }}>
-            {word}
-          </span>
-        );
+    // 줄바꿈으로 먼저 분리 (줄바꿈 보존)
+    const lines = text.split('\n');
+    
+    lines.forEach((line, lineIndex) => {
+      if (lineIndex > 0) {
+        // 줄바꿈 추가
+        elements.push(<br key={`${key}-br-${lineIndex}`} />);
       }
+      
+      const words = line.split(/(\s+|[{}()\[\];,.])/);
+      
+      words.forEach((word, index) => {
+        if (keywords.includes(word)) {
+          elements.push(
+            <span key={`${key}-keyword-${lineIndex}-${index}`} style={{ color: '#c586c0', fontWeight: 'bold' }}>
+              {word}
+            </span>
+          );
+        } else if (operators.includes(word)) {
+          elements.push(
+            <span key={`${key}-operator-${lineIndex}-${index}`} style={{ color: '#d4d4d4' }}>
+              {word}
+            </span>
+          );
+        } else if (punctuation.includes(word)) {
+          elements.push(
+            <span key={`${key}-punct-${lineIndex}-${index}`} style={{ color: '#ffd700' }}>
+              {word}
+            </span>
+          );
+        } else if (word.match(/^[a-zA-Z_$][a-zA-Z0-9_$]*$/)) {
+          // 변수명이나 함수명
+          elements.push(
+            <span key={`${key}-identifier-${lineIndex}-${index}`} style={{ color: '#9cdcfe' }}>
+              {word}
+            </span>
+          );
+        } else {
+          elements.push(
+            <span key={`${key}-text-${lineIndex}-${index}`} style={{ color: '#d4d4d4' }}>
+              {word}
+            </span>
+          );
+        }
+      });
     });
-
+    
     return elements;
   };
 
@@ -286,7 +297,7 @@ export default function SolvedPage() {
     fetchUserLevel();
   }, [user]);
 
-  // 문제 생성 함수 - 모든 레벨에서 블록코딩 API 사용, UI만 다르게
+  // 문제 생성 함수 - 레벨에 따라 다른 API 사용
   const handleGenerateProblem = async () => {
     try {
       // 문제 생성 시 즉시 기존 문제 숨기기
@@ -307,8 +318,11 @@ export default function SolvedPage() {
         language: language,
       };
 
-      // 모든 레벨에서 블록코딩 API 사용 (UI만 레벨에 따라 다름)
-      const apiEndpoint = "/api/block-coding/generate";
+      // 레벨에 따라 다른 API 사용
+      // 레벨 0-2: 블록코딩 API, 레벨 3-5: Cloze API
+      const apiEndpoint = targetLevel <= 2 
+        ? "/api/block-coding/generate"
+        : "/api/problem-bank/generate";
       
       const res = await fetch(apiEndpoint, {
         method: "POST",
@@ -320,7 +334,11 @@ export default function SolvedPage() {
       
       const response = await res.json();
       // 블록코딩 API 응답: { success: true, data: problem }
-      const problemData: Problem = response.data;
+      // Cloze API 응답: { id: ..., ...problem }
+      const problemData: Problem = response.data || response;
+      
+      // 레벨 3-5는 모두 동일한 로직 사용 (빈칸 개수만 다름)
+      // 백엔드에서 레벨에 맞는 빈칸 개수를 자동으로 생성하므로 프론트엔드에서는 별도 조정 불필요
       
       setProblem(problemData);
       setStartTime(Date.now()); // 문제 시작 시간 기록
@@ -363,11 +381,18 @@ export default function SolvedPage() {
   const handleSubmit = async () => {
     if (!problem) return;
     
-    // 문제에서 실제 빈칸 개수 확인
+    // 문제에서 실제 빈칸 개수 확인 (BLANK_1 형식 또는 __1__ 형식 모두 처리)
     const blankedCode = problem.blankedCode || problem.templateCode || problem.code || "";
-    const blankMatches = blankedCode.match(/BLANK_\d+/g) || [];
-    const blankIds = [...new Set(blankMatches.map(m => parseInt(m.replace('BLANK_', ''))))].sort((a, b) => a - b);
-    const blankCount = blankIds.length || problem.blankCount || problem.blanks?.length || problem.keywordsToBlank?.length || 1;
+    const blankMatches = blankedCode.match(/(BLANK_\d+|__\d+__)/g) || [];
+    const blankIds = [...new Set(blankMatches.map(m => {
+      if (m.startsWith('BLANK_')) {
+        return parseInt(m.replace('BLANK_', ''));
+      } else if (m.match(/^__\d+__$/)) {
+        return parseInt(m.replace(/__/g, ''));
+      }
+      return 0;
+    }).filter(id => id > 0))].sort((a, b) => a - b);
+    const blankCount = blankIds.length || problem.blankCount || problem.blanks?.length || problem.keywordsToBlank?.length || problem.solutions?.length || 1;
     
     // 빈칸 번호 순서대로 답안 배열 생성
     const userAnswersArray: string[] = [];
@@ -669,9 +694,69 @@ export default function SolvedPage() {
                       <p className="text-dark mb-2">
                         {problem.description || problem.statement || "문제 설명이 없습니다."}
                       </p>
-                      {problem.instruction && (
-                        <p className="text-muted mb-0"><strong>지시사항:</strong> {problem.instruction}</p>
-                      )}
+                      {problem.instruction && (() => {
+                        // 지시사항에서 정답 관련 내용 제거
+                        let cleanInstruction = problem.instruction;
+                        
+                        // 정답 키워드 목록 (keywordsToBlank가 있으면 사용)
+                        const answerKeywords = problem.keywordsToBlank || [];
+                        
+                        // 1. "답:", "정답:", "Answer:", "답안:" 등으로 시작하는 줄 전체 제거
+                        cleanInstruction = cleanInstruction.replace(/^답\s*[:：]\s*.*$/gmi, '');
+                        cleanInstruction = cleanInstruction.replace(/^정답\s*[:：]\s*.*$/gmi, '');
+                        cleanInstruction = cleanInstruction.replace(/^Answer\s*[:：]\s*.*$/gmi, '');
+                        cleanInstruction = cleanInstruction.replace(/^답안\s*[:：]\s*.*$/gmi, '');
+                        
+                        // 2. "정답은 ...", "답은 ..." 같은 패턴 제거
+                        cleanInstruction = cleanInstruction.replace(/정답은\s+[^\n\.]+/gi, '');
+                        cleanInstruction = cleanInstruction.replace(/답은\s+[^\n\.]+/gi, '');
+                        cleanInstruction = cleanInstruction.replace(/정답\s+[^\n\.]+/gi, '');
+                        
+                        // 3. "목적:" 이후에 정답 관련 내용이 있는 경우 처리
+                        if (cleanInstruction.includes('목적:')) {
+                          // "목적:" 뒤에 "답:", "정답:" 같은 패턴이 있으면 그 이후 부분 제거
+                          const purposeIndex = cleanInstruction.indexOf('목적:');
+                          const afterPurpose = cleanInstruction.substring(purposeIndex);
+                          
+                          // "목적: ..." 부분 찾기 (줄 끝이나 답 관련 패턴 전까지)
+                          const answerPatternMatch = afterPurpose.match(/답\s*[:：]|정답\s*[:：]/i);
+                          
+                          if (answerPatternMatch) {
+                            // "목적:" 부분과 그 직후 가이드 문구만 유지, "답:" 이후 제거
+                            const beforeAnswer = afterPurpose.substring(0, answerPatternMatch.index);
+                            cleanInstruction = cleanInstruction.substring(0, purposeIndex) + beforeAnswer.trim();
+                          } else {
+                            // "목적:" 이후에 정답 키워드가 직접 포함되어 있는 경우
+                            // "목적: ..." 부분만 유지하고 나머지 제거
+                            const purposeMatch = afterPurpose.match(/목적\s*[:：]\s*[^\n]*/);
+                            if (purposeMatch) {
+                              const beforePurpose = cleanInstruction.substring(0, purposeIndex);
+                              // "목적: 문제 해결을 위한 가이드" 같은 패턴만 유지
+                              const purposeLine = purposeMatch[0].trim();
+                              cleanInstruction = beforePurpose + purposeLine;
+                            }
+                          }
+                        }
+                        
+                        // 4. keywordsToBlank에 있는 정답 키워드들을 포함한 문장 제거 (단, "목적:" 줄은 제외)
+                        answerKeywords.forEach((keyword: string) => {
+                          // 이스케이프 처리
+                          const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                          // 키워드를 포함한 문장 제거 (단, "목적:"이 포함된 줄은 제외)
+                          cleanInstruction = cleanInstruction.replace(
+                            new RegExp(`^(?!.*목적[:：])[^\\n]*${escapedKeyword}[^\\n]*$`, 'gmi'),
+                            ''
+                          );
+                        });
+                        
+                        // 5. 연속된 공백과 줄바꿈 정리
+                        cleanInstruction = cleanInstruction.replace(/\n\s*\n+/g, '\n').trim();
+                        
+                        // 정리된 instruction이 비어있지 않을 때만 표시
+                        return cleanInstruction ? (
+                          <p className="text-muted mb-0"><strong>지시사항:</strong> {cleanInstruction}</p>
+                        ) : null;
+                      })()}
                       <div className="mt-2">
                         <span className="badge bg-danger me-2">레벨 {problem.level || uiLevel}</span>
                         {problem.topic && (
@@ -738,112 +823,138 @@ export default function SolvedPage() {
                       </small>
                     </h4>
                     <div className="bg-dark rounded p-3" style={{ borderRadius: "15px", fontFamily: "monospace" }}>
-                      <pre className="text-light mb-0" style={{ fontSize: "14px", lineHeight: "1.5" }}>
-                        <code>
-                          {(problem.blankedCode || problem.templateCode || problem.code || "").split(/(BLANK_\d+)/).map((part: string, index: number) => {
-                            if (part.startsWith('BLANK_')) {
-                              const blankId = parseInt(part.replace('BLANK_', ''));
+                      <pre className="text-light mb-0" style={{ fontSize: "14px", lineHeight: "1.5", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                        <code style={{ display: "block" }}>
+                          {(() => {
+                            const codeText = problem.blankedCode || problem.templateCode || problem.code || "";
+                            const lines = codeText.split('\n');
+                            
+                            return lines.map((line, lineIndex) => {
+                              const parts = line.split(/(BLANK_\d+|__\d+__)/);
                               
-                              // 레벨 0-2: 드래그 앤 드롭 영역
-                              if (uiLevel <= 2) {
-                                return (
-                                  <span
-                                    key={index}
-                                    className="d-inline-block"
-                                    style={{
-                                      background: "#4a5568",
-                                      border: "2px dashed #718096",
-                                      borderRadius: "6px",
-                                      padding: "4px 16px",
-                                      margin: "0 4px",
-                                      minWidth: "120px",
-                                      textAlign: "center",
-                                      color: "#e2e8f0",
-                                      fontSize: "13px",
-                                      fontWeight: "500",
-                                      letterSpacing: "0.5px",
-                                      cursor: "pointer",
-                                      transition: "all 0.2s ease"
-                                    }}
-                                    onDrop={(e) => {
-                                      e.preventDefault();
-                                      const blockText = e.dataTransfer.getData("text/plain");
-                                      if (blockText) handleDrop(blankId, blockText);
-                                    }}
-                                    onDragOver={(e) => {
-                                      e.preventDefault();
-                                      e.currentTarget.style.background = "#5a6578";
-                                      e.currentTarget.style.borderColor = "#a0aec0";
-                                    }}
-                                    onDragLeave={(e) => {
-                                      e.currentTarget.style.background = "#4a5568";
-                                      e.currentTarget.style.borderColor = "#718096";
-                                    }}
-                                  >
-                                    {userAnswers[blankId] ? (
-                                      <>
-                                        <span style={{ color: "#90cdf4" }}>{userAnswers[blankId]}</span>
-                                        <button 
-                                          onClick={() => clearBlank(blankId)}
-                                          className="btn btn-sm ms-2"
-                                          style={{ 
-                                            fontSize: "12px", 
-                                            padding: "0 4px", 
-                                            border: "1px solid #718096", 
-                                            background: "#2d3748",
-                                            color: "#e2e8f0",
-                                            borderRadius: "3px",
-                                            lineHeight: "1"
-                                          }}
-                                        >
-                                          ×
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <span style={{ color: "#a0aec0", fontStyle: "italic" }}>BLANK</span>
-                                    )}
-                                  </span>
-                                );
-                              } 
-                              // 레벨 3-5: 직접 입력 필드
-                              else {
-                                return (
-                                  <input
-                                    key={index}
-                                    type="text"
-                                    className="d-inline-block"
-                                    value={userAnswers[blankId] || ""}
-                                    onChange={(e) => handleInputChange(blankId, e.target.value)}
-                                    placeholder={`빈칸 ${blankId}`}
-                                    style={{
-                                      background: "#4a5568",
-                                      border: "2px solid #718096",
-                                      borderRadius: "6px",
-                                      padding: "4px 12px",
-                                      margin: "0 4px",
-                                      minWidth: "100px",
-                                      maxWidth: "150px",
-                                      textAlign: "center",
-                                      color: "#90cdf4",
-                                      fontSize: "13px",
-                                      fontWeight: "500",
-                                      outline: "none",
-                                      fontFamily: "monospace"
-                                    }}
-                                    onFocus={(e) => {
-                                      e.currentTarget.style.borderColor = "#a0aec0";
-                                      e.currentTarget.style.background = "#5a6578";
-                                    }}
-                                    onBlur={(e) => {
-                                      e.currentTarget.style.borderColor = "#718096";
-                                      e.currentTarget.style.background = "#4a5568";
-                                    }}
-                                  />
-                                );
-                              }
-                            }
-                            return <SyntaxHighlight key={index} code={part} />;
-                          })}
+                              return (
+                                <span key={lineIndex} style={{ display: "block" }}>
+                                  {parts.map((part: string, partIndex: number) => {
+                                    let blankId: number | null = null;
+                                    
+                                    // BLANK_1 형식 처리
+                                    if (part.startsWith('BLANK_')) {
+                                      blankId = parseInt(part.replace('BLANK_', ''));
+                                    }
+                                    // __1__ 형식 처리 (Cloze API)
+                                    else if (part.match(/^__\d+__$/)) {
+                                      blankId = parseInt(part.replace(/__/g, ''));
+                                    }
+                                    
+                                    if (blankId !== null) {
+                                      // 레벨 0-2: 드래그 앤 드롭 영역
+                                      if (uiLevel <= 2) {
+                                        return (
+                                          <span
+                                            key={`${lineIndex}-${partIndex}`}
+                                            className="d-inline-block"
+                                            style={{
+                                              background: "#4a5568",
+                                              border: "2px dashed #718096",
+                                              borderRadius: "6px",
+                                              padding: "4px 16px",
+                                              margin: "0 4px",
+                                              minWidth: "120px",
+                                              textAlign: "center",
+                                              color: "#e2e8f0",
+                                              fontSize: "13px",
+                                              fontWeight: "500",
+                                              letterSpacing: "0.5px",
+                                              cursor: "pointer",
+                                              transition: "all 0.2s ease"
+                                            }}
+                                            onDrop={(e) => {
+                                              e.preventDefault();
+                                              const blockText = e.dataTransfer.getData("text/plain");
+                                              if (blockText) handleDrop(blankId, blockText);
+                                            }}
+                                            onDragOver={(e) => {
+                                              e.preventDefault();
+                                              e.currentTarget.style.background = "#5a6578";
+                                              e.currentTarget.style.borderColor = "#a0aec0";
+                                            }}
+                                            onDragLeave={(e) => {
+                                              e.currentTarget.style.background = "#4a5568";
+                                              e.currentTarget.style.borderColor = "#718096";
+                                            }}
+                                          >
+                                            {userAnswers[blankId] ? (
+                                              <>
+                                                <span style={{ color: "#90cdf4" }}>{userAnswers[blankId]}</span>
+                                                <button 
+                                                  onClick={() => clearBlank(blankId)}
+                                                  className="btn btn-sm ms-2"
+                                                  style={{ 
+                                                    fontSize: "12px", 
+                                                    padding: "0 4px", 
+                                                    border: "1px solid #718096", 
+                                                    background: "#2d3748",
+                                                    color: "#e2e8f0",
+                                                    borderRadius: "3px",
+                                                    lineHeight: "1"
+                                                  }}
+                                                >
+                                                  ×
+                                                </button>
+                                              </>
+                                            ) : (
+                                              <span style={{ color: "#a0aec0", fontStyle: "italic" }}>BLANK</span>
+                                            )}
+                                          </span>
+                                        );
+                                      } 
+                                      // 레벨 3-5: 직접 입력 필드
+                                      else {
+                                        return (
+                                          <input
+                                            key={`${lineIndex}-${partIndex}`}
+                                            type="text"
+                                            className="d-inline-block"
+                                            value={userAnswers[blankId] || ""}
+                                            onChange={(e) => handleInputChange(blankId, e.target.value)}
+                                            placeholder={`빈칸 ${blankId}`}
+                                            style={{
+                                              background: "#4a5568",
+                                              border: "2px solid #718096",
+                                              borderRadius: "6px",
+                                              padding: "4px 12px",
+                                              margin: "0 4px",
+                                              minWidth: "100px",
+                                              maxWidth: "150px",
+                                              textAlign: "center",
+                                              color: "#90cdf4",
+                                              fontSize: "13px",
+                                              fontWeight: "500",
+                                              outline: "none",
+                                              fontFamily: "monospace"
+                                            }}
+                                            onFocus={(e) => {
+                                              e.currentTarget.style.borderColor = "#a0aec0";
+                                              e.currentTarget.style.background = "#5a6578";
+                                            }}
+                                            onBlur={(e) => {
+                                              e.currentTarget.style.borderColor = "#718096";
+                                              e.currentTarget.style.background = "#4a5568";
+                                            }}
+                                          />
+                                        );
+                                      }
+                                    }
+                                    // 빈칸이 아닌 일반 코드 부분
+                                    if (part.trim() === '') {
+                                      return <span key={`${lineIndex}-${partIndex}`}>{part}</span>;
+                                    }
+                                    return <SyntaxHighlight key={`${lineIndex}-${partIndex}`} code={part} />;
+                                  })}
+                                </span>
+                              );
+                            });
+                          })()}
                         </code>
                       </pre>
                     </div>

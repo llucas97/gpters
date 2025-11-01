@@ -46,12 +46,26 @@ router.get('/:userId/overview', async (req, res) => {
         averageScore: parseFloat(type.avgScore) || 0
       })),
       
+      // Topic별 통계 추가
+      topicBreakdown: stats.topicStats.map(topic => ({
+        topic: topic.topic,
+        totalProblems: parseInt(topic.totalCount),
+        correctProblems: parseInt(topic.correctCount),
+        accuracy: topic.totalCount > 0 ? (topic.correctCount / topic.totalCount) * 100 : 0,
+        averageScore: parseFloat(topic.avgScore) || 0
+      })),
+      
       // 최근 활동 (최근 7일)
       recentActivity: await getRecentActivity(userId, 7),
       
       // 성취도 등급
       achievementLevel: calculateAchievementLevel(stats.accuracy)
     };
+    
+    console.log('[UserStats API] recentActivity 포함된 통계:', {
+      hasRecentActivity: !!additionalStats.recentActivity,
+      recentActivity: additionalStats.recentActivity
+    });
     
     res.json({
       success: true,
@@ -231,23 +245,69 @@ router.get('/:userId/achievements', async (req, res) => {
  * 최근 활동 조회
  */
 async function getRecentActivity(userId, days) {
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-  
-  const options = {
-    startDate: startDate.toISOString().split('T')[0],
-    endDate: endDate.toISOString().split('T')[0]
-  };
-  
-  const result = await GradingResultService.getUserProblemHistory(userId, options);
-  
-  return {
-    period: `${days}일`,
-    totalProblems: result.totalCount,
-    correctProblems: result.records.filter(r => r.is_correct).length,
-    averageScore: result.records.reduce((sum, r) => sum + (r.score || 0), 0) / result.totalCount || 0
-  };
+  try {
+    // userId를 문자열로 변환
+    const userIdString = String(userId);
+    
+    // 오늘 날짜의 마지막 시간까지 포함 (23:59:59.999)
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+    
+    // 7일 전 자정부터 시작
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const options = {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      limit: 1000, // 충분히 큰 값으로 설정하여 모든 데이터 가져오기
+      offset: 0
+    };
+    
+    console.log('[getRecentActivity] 최근 활동 조회 시작:', { 
+      userId: userIdString, 
+      days, 
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      dateRangeDays: Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))
+    });
+    
+    const result = await GradingResultService.getUserProblemHistory(userIdString, options);
+    
+    console.log('[getRecentActivity] 조회 결과:', { 
+      totalCount: result.totalCount, 
+      recordsLength: result.records?.length || 0 
+    });
+    
+    // 평균 점수 계산 수정
+    const totalCount = result.totalCount || 0;
+    const records = result.records || [];
+    const totalScore = records.reduce((sum, r) => sum + (r.score || 0), 0);
+    const averageScore = totalCount > 0 ? totalScore / totalCount : 0;
+    const correctProblems = records.filter(r => r.is_correct).length;
+    
+    const activityData = {
+      period: `${days}일`,
+      totalProblems: totalCount,
+      correctProblems: correctProblems,
+      averageScore: Math.round(averageScore * 100) / 100 // 소수점 2자리로 반올림
+    };
+    
+    console.log('[getRecentActivity] 반환 데이터:', activityData);
+    
+    return activityData;
+    
+  } catch (error) {
+    console.error('[getRecentActivity] 오류:', error);
+    // 에러 발생 시 기본값 반환
+    return {
+      period: `${days}일`,
+      totalProblems: 0,
+      correctProblems: 0,
+      averageScore: 0
+    };
+  }
 }
 
 /**

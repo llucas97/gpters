@@ -265,13 +265,21 @@ class ExperienceService {
       };
     }
     
-    const { currentLevelExp, expToNextLevel, progressPercentage } = experienceData;
+    // expToNextLevel을 우선적으로 사용, 없으면 levelInfo에서 가져오거나 기본값 사용
+    const required = experienceData.expToNextLevel || experienceData.levelInfo?.levelExpRequired || 100;
+    const current = experienceData.currentLevelExp || 0;
+    
+    // current가 required를 초과하지 않도록 제한 (레벨업 대기 상태 처리)
+    const clampedCurrent = Math.min(current, required);
+    
+    // 진행률 계산 (0-100%로 제한)
+    const percentage = Math.max(0, Math.min(100, experienceData.progressPercentage || (required > 0 ? Math.round((clampedCurrent / required) * 100) : 0)));
     
     return {
-      percentage: progressPercentage || 0,
-      current: currentLevelExp || 0,
-      required: expToNextLevel || 100,
-      display: `${currentLevelExp || 0} / ${expToNextLevel || 100}`
+      percentage: percentage,
+      current: clampedCurrent,
+      required: required,
+      display: `${clampedCurrent} / ${required}`
     };
   }
   

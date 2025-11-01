@@ -9,6 +9,8 @@ export interface RecentProblem {
   problemId: number | null;
   title: string;
   type: string;
+  topic: string;
+  language: string;
   description: string | null;
   level: number;
   isCorrect: boolean;
@@ -110,6 +112,49 @@ class UserProgressService {
       'bug_fix': '버그수정'
     };
     return typeNames[type] || type;
+  }
+  
+  /**
+   * 문제 Topic 한글 이름 반환
+   */
+  static getTopicName(topic: string): string {
+    const topicNames: { [key: string]: string } = {
+      'graph': '그래프',
+      'dp': '동적계획법',
+      'greedy': '그리디',
+      'tree': '트리',
+      'string': '문자열',
+      'math': '수학',
+      'sort': '정렬',
+      'search': '탐색',
+      'stack': '스택',
+      'queue': '큐',
+      'hash': '해시',
+      'heap': '힙',
+      'programming': '프로그래밍'
+    };
+    return topicNames[topic] || topic;
+  }
+  
+  /**
+   * 프로그래밍 언어 한글 이름 반환
+   */
+  static getLanguageName(language: string): string {
+    const languageNames: { [key: string]: string } = {
+      'python': 'Python',
+      'javascript': 'JavaScript',
+      'java': 'Java',
+      'cpp': 'C++',
+      'c': 'C',
+      'csharp': 'C#',
+      'ruby': 'Ruby',
+      'go': 'Go',
+      'rust': 'Rust',
+      'swift': 'Swift',
+      'kotlin': 'Kotlin',
+      'typescript': 'TypeScript'
+    };
+    return languageNames[language] || language;
   }
   
   /**

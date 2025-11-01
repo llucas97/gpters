@@ -246,4 +246,114 @@ router.post('/:userId/reset', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/experience/sync-all-levels
+ * 모든 유저의 레벨 데이터를 UserExperience 테이블에서 users 테이블로 동기화 (관리자용)
+ */
+router.post('/sync-all-levels', async (req, res) => {
+  try {
+    console.log('[Experience API] 모든 유저 레벨 동기화 요청');
+    
+    const { User, UserExperience } = require('../models');
+    
+    // UserExperience 테이블에서 모든 유저 데이터 조회
+    const allUserExperiences = await UserExperience.findAll({
+      order: [['user_id', 'ASC']]
+    });
+    
+    console.log(`[Experience API] 총 ${allUserExperiences.length}개의 UserExperience 레코드 발견`);
+    
+    if (allUserExperiences.length === 0) {
+      return res.json({
+        success: true,
+        message: '업데이트할 데이터가 없습니다',
+        updated: 0,
+        skipped: 0,
+        errors: 0
+      });
+    }
+    
+    let updatedCount = 0;
+    let skippedCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    
+    for (const userExp of allUserExperiences) {
+      try {
+        const userId = userExp.user_id;
+        const experienceSystemLevel = userExp.level || 1;
+        const totalExperience = userExp.totalExperience || 0;
+        
+        // ExperienceSystem의 레벨(1부터)을 users 테이블의 current_level(0-5)로 변환
+        const usersTableLevel = Math.max(0, Math.min(5, experienceSystemLevel - 1));
+        
+        // 해당 유저가 존재하는지 확인
+        const user = await User.findByPk(userId);
+        
+        if (!user) {
+          skippedCount++;
+          continue;
+        }
+        
+        // 현재 users 테이블의 레벨과 경험치
+        const currentUserLevel = user.current_level;
+        const currentUserExp = user.experience_points;
+        
+        // 업데이트가 필요한지 확인
+        const needsUpdate = 
+          currentUserLevel !== usersTableLevel || 
+          currentUserExp !== totalExperience;
+        
+        if (needsUpdate) {
+          await User.update(
+            {
+              current_level: usersTableLevel,
+              experience_points: totalExperience,
+              updated_at: new Date()
+            },
+            {
+              where: { user_id: userId }
+            }
+          );
+          
+          updatedCount++;
+        } else {
+          skippedCount++;
+        }
+        
+      } catch (error) {
+        errorCount++;
+        errors.push({
+          userId: userExp.user_id,
+          error: error.message
+        });
+      }
+    }
+    
+    console.log('[Experience API] 동기화 완료:', {
+      updated: updatedCount,
+      skipped: skippedCount,
+      errors: errorCount
+    });
+    
+    res.json({
+      success: true,
+      message: '레벨 동기화 완료',
+      updated: updatedCount,
+      skipped: skippedCount,
+      errors: errorCount,
+      total: allUserExperiences.length,
+      errorDetails: errors.length > 0 ? errors : undefined
+    });
+    
+  } catch (error) {
+    console.error('[Experience API] 레벨 동기화 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '레벨 동기화 중 오류가 발생했습니다',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;

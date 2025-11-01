@@ -57,12 +57,6 @@ const Navbar = () => {
                   </Link>
                 </li>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/solved">
-                    <i className="bi bi-puzzle me-1"></i>
-                    문제 해결
-                  </Link>
-                </li>
-                <li className="nav-item">
                   <Link className="nav-link" to="/dashboard">
                     <i className="bi bi-graph-up me-1"></i>
                     학습 진도

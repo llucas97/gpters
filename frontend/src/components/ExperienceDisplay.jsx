@@ -199,10 +199,6 @@ const ExperienceDisplay = ({ userId, showStats = false, showRanking = false, cla
               <span className="stat-label">이번 달</span>
               <span className="stat-value">{stats.patterns?.monthlyExp || 0}</span>
             </div>
-            <div className="stat-item">
-              <span className="stat-label">평균 획득</span>
-              <span className="stat-value">{stats.patterns?.averageGain || 0}</span>
-            </div>
           </div>
         </div>
       )}

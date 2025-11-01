@@ -75,9 +75,11 @@ const LoginPage = () => {
           id: loginResponse.user.id.toString(),
           email: loginResponse.user.email,
           username: loginResponse.user.username,
-          survey_completed: loginResponse.user.survey_completed
+          survey_completed: loginResponse.user.survey_completed,
+          current_level: loginResponse.user.current_level
         }
         
+        console.log('[LoginPage] 로그인 사용자 정보:', userData)
         login(userData)
       } else {
         // 기존 방식으로 사용자 정보 조회
@@ -88,9 +90,11 @@ const LoginPage = () => {
           id: userInfo.user_id.toString(),
           email: userInfo.email,
           username: userInfo.username,
-          survey_completed: userInfo.survey_completed
+          survey_completed: userInfo.survey_completed,
+          current_level: userInfo.current_level
         }
         
+        console.log('[LoginPage] 현재 사용자 정보:', userData)
         login(userData)
       }
       

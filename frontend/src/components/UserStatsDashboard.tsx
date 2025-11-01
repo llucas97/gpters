@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Progress, Badge, List, Statistic, Spin, Alert } from 'antd';
+import { Card, Row, Col, Progress, Statistic, Spin, Alert } from 'antd';
 import { 
   TrophyOutlined, 
-  CheckCircleOutlined, 
-  CloseCircleOutlined,
-  ClockCircleOutlined,
+  CheckCircleOutlined,
   BarChartOutlined,
   StarOutlined
 } from '@ant-design/icons';
 import UserStatsService from '../services/userStatsService';
+import TopicRadarChart from './TopicRadarChart';
 
 interface UserStatsDashboardProps {
   userId: string;
@@ -17,7 +16,6 @@ interface UserStatsDashboardProps {
 const UserStatsDashboard: React.FC<UserStatsDashboardProps> = ({ userId }) => {
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<any>(null);
-  const [achievements, setAchievements] = useState<any>(null);
   const [recentActivity, setRecentActivity] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,30 +30,21 @@ const UserStatsDashboard: React.FC<UserStatsDashboardProps> = ({ userId }) => {
       setLoading(true);
       setError(null);
 
-      // 병렬로 모든 데이터 로드
-      const [overviewResult, achievementsResult, recentResult] = await Promise.all([
-        UserStatsService.getOverview(userId),
-        UserStatsService.getAchievements(userId),
-        UserStatsService.getRecentActivity(userId)
-      ]);
+      // overview에서 recentActivity도 함께 가져옴
+      const overviewResult = await UserStatsService.getOverview(userId);
 
       if (overviewResult.success) {
         setOverview(overviewResult.stats);
+        // overview에 포함된 recentActivity 사용
+        setRecentActivity(overviewResult.stats?.recentActivity || null);
+        console.log('[UserStatsDashboard] 최근 활동 데이터:', overviewResult.stats?.recentActivity);
       } else {
         throw new Error(overviewResult.error || '통계 데이터를 불러올 수 없습니다');
       }
 
-      if (achievementsResult.success) {
-        setAchievements(achievementsResult.achievements);
-      }
-
-      if (recentResult.success) {
-        setRecentActivity(recentResult.recentActivity);
-      }
-
     } catch (err) {
       console.error('사용자 통계 로드 오류:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다');
     } finally {
       setLoading(false);
     }
@@ -146,32 +135,15 @@ const UserStatsDashboard: React.FC<UserStatsDashboardProps> = ({ userId }) => {
         </Col>
       </Row>
 
-      {/* 성취도 등급 */}
-      {overview.achievementLevel && (
-        <Card title="🏆 성취도 등급" style={{ marginBottom: '24px' }}>
-          <div style={{ textAlign: 'center' }}>
-            <Badge 
-              count={overview.achievementLevel.level} 
-              style={{ 
-                backgroundColor: overview.achievementLevel.color,
-                fontSize: '24px',
-                width: '60px',
-                height: '60px',
-                lineHeight: '60px'
-              }}
-            />
-            <h3 style={{ marginTop: '16px', color: overview.achievementLevel.color }}>
-              {overview.achievementLevel.name}
-            </h3>
-            <p>정확도 {overview.accuracy.toFixed(1)}% 달성</p>
-          </div>
-        </Card>
+      {/* Topic별 성취도 레이더 차트 */}
+      {overview.topicBreakdown && overview.topicBreakdown.length > 0 && (
+        <TopicRadarChart data={overview.topicBreakdown} />
       )}
 
       {/* 레벨별 성취도 */}
       <Card title="📈 레벨별 성취도" style={{ marginBottom: '24px' }}>
         <Row gutter={[16, 16]}>
-          {overview.levelBreakdown?.map((level, index) => (
+          {overview.levelBreakdown?.map((level: any, index: number) => (
             <Col xs={24} sm={12} md={8} lg={6} key={index}>
               <Card size="small">
                 <div style={{ textAlign: 'center' }}>
@@ -179,7 +151,7 @@ const UserStatsDashboard: React.FC<UserStatsDashboardProps> = ({ userId }) => {
                   <Progress 
                     type="circle" 
                     percent={level.accuracy} 
-                    width={80}
+                    size={80}
                     format={() => `${level.correctProblems}/${level.totalProblems}`}
                   />
                   <p style={{ marginTop: '8px', fontSize: '12px' }}>
@@ -192,136 +164,40 @@ const UserStatsDashboard: React.FC<UserStatsDashboardProps> = ({ userId }) => {
         </Row>
       </Card>
 
-      {/* 문제 유형별 성취도 */}
-      <Card title="🎯 문제 유형별 성취도" style={{ marginBottom: '24px' }}>
+      {/* 최근 활동 */}
+      <Card title="📅 최근 7일 활동" style={{ marginBottom: '24px' }}>
         <Row gutter={[16, 16]}>
-          {overview.typeBreakdown?.map((type, index) => {
-            const typeNames = {
-              'block': '블록코딩',
-              'cloze': '빈칸채우기',
-              'code_editor': '코드에디터',
-              'ordering': '순서배열',
-              'bug_fix': '버그수정'
-            };
-            
-            return (
-              <Col xs={24} sm={12} md={8} lg={6} key={index}>
-                <Card size="small">
-                  <div style={{ textAlign: 'center' }}>
-                    <h4>{typeNames[type.problemType] || type.problemType}</h4>
-                    <Progress 
-                      percent={type.accuracy} 
-                      strokeColor={type.accuracy >= 80 ? '#52c41a' : type.accuracy >= 60 ? '#fa8c16' : '#ff4d4f'}
-                    />
-                    <p style={{ marginTop: '8px', fontSize: '12px' }}>
-                      {type.correctProblems}/{type.totalProblems} 문제 정답
-                    </p>
-                    <p style={{ fontSize: '12px', color: '#666' }}>
-                      평균 점수: {type.averageScore.toFixed(1)}점
-                    </p>
-                  </div>
-                </Card>
-              </Col>
-            );
-          })}
+          <Col xs={24} sm={8}>
+            <Card size="small">
+              <Statistic
+                title="문제 수"
+                value={recentActivity?.totalProblems || 0}
+                prefix={<BarChartOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card size="small">
+              <Statistic
+                title="정답 수"
+                value={recentActivity?.correctProblems || 0}
+                prefix={<CheckCircleOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card size="small">
+              <Statistic
+                title="평균 점수"
+                value={recentActivity?.averageScore ? Number(recentActivity.averageScore).toFixed(1) : 0}
+                suffix="/ 100"
+                prefix={<TrophyOutlined />}
+              />
+            </Card>
+          </Col>
         </Row>
       </Card>
 
-      {/* 최근 활동 */}
-      {recentActivity && (
-        <Card title="📅 최근 7일 활동" style={{ marginBottom: '24px' }}>
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={8}>
-              <Card size="small">
-                <Statistic
-                  title="문제 수"
-                  value={recentActivity.totalProblems}
-                  prefix={<BarChartOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card size="small">
-                <Statistic
-                  title="정답 수"
-                  value={recentActivity.correctProblems}
-                  prefix={<CheckCircleOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card size="small">
-                <Statistic
-                  title="평균 점수"
-                  value={recentActivity.averageScore}
-                  suffix="/ 100"
-                  prefix={<TrophyOutlined />}
-                />
-              </Card>
-            </Col>
-          </Row>
-        </Card>
-      )}
-
-      {/* 성취도 및 뱃지 */}
-      {achievements && (
-        <Card title="🏅 성취도 및 뱃지">
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12}>
-              <Card size="small">
-                <Statistic
-                  title="총 뱃지 수"
-                  value={achievements.totalAchievements}
-                  prefix={<TrophyOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Card size="small">
-                <h4>획득한 뱃지</h4>
-                <List
-                  size="small"
-                  dataSource={achievements.achievements}
-                  renderItem={(achievement) => (
-                    <List.Item>
-                      <Badge 
-                        status="success" 
-                        text={achievement.name}
-                        style={{ fontSize: '12px' }}
-                      />
-                    </List.Item>
-                  )}
-                />
-              </Card>
-            </Col>
-          </Row>
-          
-          {achievements.nextGoals && achievements.nextGoals.length > 0 && (
-            <Card size="small" style={{ marginTop: '16px' }}>
-              <h4>🎯 다음 목표</h4>
-              <List
-                size="small"
-                dataSource={achievements.nextGoals}
-                renderItem={(goal) => (
-                  <List.Item>
-                    <div style={{ width: '100%' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span>{goal.description}</span>
-                        <span>{goal.current}/{goal.target}</span>
-                      </div>
-                      <Progress 
-                        percent={(goal.current / goal.target) * 100} 
-                        size="small"
-                        strokeColor="#1890ff"
-                      />
-                    </div>
-                  </List.Item>
-                )}
-              />
-            </Card>
-          )}
-        </Card>
-      )}
     </div>
   );
 };

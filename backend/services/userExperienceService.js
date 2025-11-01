@@ -1,6 +1,6 @@
 'use strict';
 
-const { UserExperience } = require('../models');
+const { UserExperience, User } = require('../models');
 const ExperienceSystem = require('./experienceSystem');
 
 /**
@@ -26,7 +26,7 @@ class UserExperienceService {
         userExp = await UserExperience.create({
           user_id: userId,
           totalExperience: 0,
-          level: 1,
+          level: 1, // 경험치 레벨은 항상 1부터 시작
           currentLevelExp: 0,
           expToNextLevel: 100,
           progressPercentage: 0,
@@ -40,26 +40,56 @@ class UserExperienceService {
         console.log('[UserExperienceService] 새로운 경험치 정보 생성:', userExp.id);
       }
       
-      // 레벨 정보 업데이트
-      const levelInfo = ExperienceSystem.getUserLevelInfo(userExp);
+      // 경험치를 기반으로 레벨 정보 재계산 (데이터 일관성 보장)
+      const totalExp = userExp.totalExperience || 0;
+      const levelInfo = ExperienceSystem.calculateLevelFromExperience(totalExp);
+      
+      // currentLevelExp가 levelExpRequired를 초과하지 않도록 보장
+      const currentLevelExp = Math.min(levelInfo.currentLevelExp, levelInfo.levelExpRequired);
+      const expToNextLevel = levelInfo.levelExpRequired;
+      const progressPercentage = Math.max(0, Math.min(100, levelInfo.progressPercentage));
+      
+      // DB에 저장된 레벨과 계산된 레벨이 다르면 업데이트 (데이터 동기화)
+      if (userExp.level !== levelInfo.level || 
+          userExp.currentLevelExp !== currentLevelExp ||
+          userExp.expToNextLevel !== expToNextLevel ||
+          userExp.progressPercentage !== progressPercentage) {
+        await UserExperience.update({
+          level: levelInfo.level,
+          currentLevelExp: currentLevelExp,
+          expToNextLevel: expToNextLevel,
+          progressPercentage: progressPercentage
+        }, {
+          where: { user_id: userId }
+        });
+        console.log('[UserExperienceService] 경험치 정보 동기화 완료:', { 
+          oldLevel: userExp.level, 
+          newLevel: levelInfo.level 
+        });
+      }
       
       return {
         success: true,
         data: {
           id: userExp.id,
           userId: userExp.user_id,
-          totalExperience: userExp.totalExperience,
+          totalExperience: totalExp,
           level: levelInfo.level,
-          currentLevelExp: levelInfo.currentLevelExp,
-          expToNextLevel: levelInfo.expToNextLevel,
-          progressPercentage: levelInfo.progressPercentage,
+          currentLevelExp: currentLevelExp,
+          expToNextLevel: expToNextLevel,
+          progressPercentage: progressPercentage,
           lastLevelUpAt: userExp.lastLevelUpAt,
           totalLevelUps: userExp.totalLevelUps,
-          highestLevel: userExp.highestLevel,
+          highestLevel: Math.max(userExp.highestLevel || 1, levelInfo.level),
           dailyExperience: userExp.dailyExperience,
           weeklyExperience: userExp.weeklyExperience,
           monthlyExperience: userExp.monthlyExperience,
-          levelInfo
+          levelInfo: {
+            level: levelInfo.level,
+            currentLevelExp: currentLevelExp,
+            levelExpRequired: expToNextLevel,
+            progressPercentage: progressPercentage
+          }
         }
       };
       
@@ -140,6 +170,26 @@ class UserExperienceService {
         where: { user_id: userId }
       });
       
+      // users 테이블의 experience_points만 업데이트
+      // current_level은 레벨 테스트 결과이므로 변경하지 않음
+      await User.update(
+        { 
+          experience_points: updatedData.totalExperience || 0,
+          updated_at: new Date()
+        },
+        { 
+          where: { user_id: userId } 
+        }
+      );
+      
+      console.log('[UserExperienceService] users 테이블 업데이트:', {
+        userId,
+        oldLevel: userExpData.level,
+        experienceSystemLevel: updatedData.level,
+        totalExp: updatedData.totalExperience,
+        leveledUp: updatedData.leveledUp
+      });
+      
       console.log('[UserExperienceService] 경험치 업데이트 완료:', {
         userId,
         gainedExp: updatedData.gainedExperience,
@@ -177,10 +227,20 @@ class UserExperienceService {
     try {
       console.log('[UserExperienceService] 레벨 순위 조회:', { limit });
       
+      const { Sequelize } = require('sequelize');
+      
+      // user_id로 GROUP BY하여 중복 제거
       const rankings = await UserExperience.findAll({
+        attributes: [
+          'user_id',
+          [Sequelize.fn('MAX', Sequelize.col('level')), 'level'],
+          [Sequelize.fn('MAX', Sequelize.col('totalExperience')), 'totalExperience'],
+          [Sequelize.fn('MAX', Sequelize.col('highestLevel')), 'highestLevel']
+        ],
+        group: ['user_id'],
         order: [
-          ['level', 'DESC'],
-          ['totalExperience', 'DESC']
+          [Sequelize.literal('level'), 'DESC'],
+          [Sequelize.literal('totalExperience'), 'DESC']
         ],
         limit,
         include: [
@@ -189,7 +249,8 @@ class UserExperienceService {
             as: 'user',
             attributes: ['user_id', 'username', 'email']
           }
-        ]
+        ],
+        subQuery: false
       });
       
       return {
@@ -198,9 +259,9 @@ class UserExperienceService {
           rank: index + 1,
           userId: rank.user_id,
           username: rank.user?.username || `User${rank.user_id}`,
-          level: rank.level,
-          totalExperience: rank.totalExperience,
-          highestLevel: rank.highestLevel
+          level: rank.dataValues.level,
+          totalExperience: rank.dataValues.totalExperience,
+          highestLevel: rank.dataValues.highestLevel
         }))
       };
       
