@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gpters - AI 기반 알고리즘 학습 플랫폼</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .presentation-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .slide-content {
+            background: white;
+            border-radius: 20px;
+            padding: 60px;
+            max-width: 1200px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .slide-title {
+            font-size: 3em;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .slide-subtitle {
+            font-size: 1.8em;
+            color: #555;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .slide-text {
+            font-size: 1.3em;
+            color: #666;
+            line-height: 1.8;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+        }
+
+        h3 {
+            font-size: 2em;
+            color: #764ba2;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        li {
+            font-size: 1.4em;
+            color: #555;
+            line-height: 2;
+            padding-left: 30px;
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        li:before {
+            content: "▸";
+            color: #667eea;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 30px;
+        }
+
+        .column {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .tech-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .tech-card h4 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: white;
+        }
+
+        .tech-card p {
+            font-size: 1.2em;
+            line-height: 1.6;
+        }
+
+        .level-card {
+            background: white;
+            border: 2px solid #667eea;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .level-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .level-card h3 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-top: 0;
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            background: white;
+            border: none;
+            padding: 15px 25px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            background: #667eea;
+            color: white;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .slide-number {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1.1em;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin: 5px;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            color: #764ba2;
+            font-size: 0.9em;
+        }
+
+        .api-endpoint {
+            background: #2d3748;
+            color: #68d391;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            font-size: 1.2em;
+        }
+
+        .roadmap-section {
+            margin: 20px 0;
+        }
+
+        .roadmap-section h4 {
+            color: #667eea;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .status-done { color: #48bb78; }
+        .status-progress { color: #ed8936; }
+        .status-planned { color: #667eea; }
+    </style>
+</head>
+<body>
+    <div class="presentation-container">
+        <!-- Slide 1: Title -->
+        <div class="slide active">
+            <div class="slide-content">
+                <div class="slide-title">gpters</div>
+                <div class="slide-subtitle">AI 기반 알고리즘 학습 플랫폼</div>
+                <div class="slide-text" style="margin-top: 30px;">
+                    <p style="font-size: 1.5em; margin-bottom: 20px;">🎯 문제 생성 · 풀이 · 채점을 한 곳에서</p>
+                    <p style="font-size: 1.5em;">📊 레벨별 맞춤형 학습 경험 제공</p>
+                </div>
+                <div class="slide-text" style="margin-top: 50px; color: #999;">
+                    졸업작품 프로젝트
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: Project Overview -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>프로젝트 소개</h2>
+                <div style="margin-top: 40px;">
+                    <h3>gpters는 무엇인가?</h3>
+                    <ul>
+                        <li>알고리즘 문제를 자동으로 생성하고 채점하는 교육 플랫폼</li>
+                        <li>학습자의 수준에 맞춘 맞춤형 학습 경험 제공</li>
+                        <li>OpenAI API를 활용한 지능형 문제 생성 시스템</li>
+                    </ul>
+                    
+                    <h3 style="margin-top: 40px;">핵심 가치</h3>
+                    <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+                        <span class="badge">무한한 학습 콘텐츠</span>
+                        <span class="badge">개인화된 학습 경로</span>
+                        <span class="badge">즉각적인 피드백</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Differentiation -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>다른 플랫폼과의 차별성</h2>
+                <div style="text-align: center; margin: 40px 0;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 20px; margin-bottom: 40px;">
+                        <h3 style="color: white; font-size: 2.5em; margin: 0;">🚀 세계 최초!</h3>
+                        <p style="color: white; font-size: 1.8em; margin-top: 20px;">레벨별 맞춤형 인터페이스를 제공하는<br>AI 알고리즘 학습 플랫폼</p>
+                    </div>
+                </div>
+                <div class="two-column">
+                    <div class="column">
+                        <h3>🔍 기존 플랫폼</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li>고정된 문제 세트</li>
+                            <li>단일 코드 에디터만 제공</li>
+                            <li>초보자 진입 장벽 높음</li>
+                            <li>제한적인 학습 경험</li>
+                        </ul>
+                    </div>
+                    <div class="column" style="border-left-color: #48bb78; background: #f0fff4;">
+                        <h3 style="color: #48bb78;">✨ gpters (유일무이)</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li><strong>AI 무한 문제 생성</strong></li>
+                            <li><strong>3가지 레벨별 인터페이스</strong></li>
+                            <li><strong>초보자부터 전문가까지</strong></li>
+                            <li><strong>완전한 맞춤형 학습</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <span class="badge" style="font-size: 1.2em; padding: 12px 30px;">블록 코딩 → 클로즈 → 코드 에디터 단계별 성장</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Problems -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>해결하고자 하는 문제</h2>
+                <div class="two-column">
+                    <div class="column">
+                        <h3>🚫 기존 플랫폼의 한계</h3>
+                        <ul style="font-size: 1.1em;">
+                            <li>제한된 학습 콘텐츠</li>
+                            <li>초보자 진입 장벽</li>
+                            <li>피드백 부재</li>
+                            <li>문제 암기 현상</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h3>✅ gpters의 솔루션</h3>
+                        <ul style="font-size: 1.1em;">
+                            <li>AI 무한 문제 생성</li>
+                            <li>레벨별 맞춤 인터페이스</li>
+                            <li>즉각적 자동 채점</li>
+                            <li>상세한 피드백 제공</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Solutions -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>우리의 솔루션</h2>
+                <div style="margin-top: 40px;">
+                    <div class="level-card">
+                        <h3>1. AI 기반 무한 문제 생성</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li>OpenAI API를 활용한 자동 문제 생성</li>
+                            <li>레벨과 주제에 맞춘 맞춤형 문제 제공</li>
+                            <li>학습자가 원하는 만큼 새로운 문제 생성 가능</li>
+                        </ul>
+                    </div>
+                    <div class="level-card">
+                        <h3>2. 레벨별 맞춤형 학습 인터페이스</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li><strong>레벨 0-1:</strong> 블록 코딩 UI (드래그 앤 드롭)</li>
+                            <li><strong>레벨 2-3:</strong> 클로즈 (빈칸 채우기)</li>
+                            <li><strong>레벨 4-5:</strong> 전문 코드 에디터 (Monaco Editor)</li>
+                        </ul>
+                    </div>
+                    <div class="level-card">
+                        <h3>3. 즉각적인 자동 채점 및 피드백</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li>레벨별 맞춤 채점 규칙 적용</li>
+                            <li>상세한 오답 분석 및 힌트 제공</li>
+                            <li>학습 진행도 실시간 추적</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Key Features -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>주요 기능</h2>
+                <div class="tech-grid">
+                    <div class="tech-card">
+                        <h4>🤖 AI 문제 생성</h4>
+                        <p>레벨과 주제를 선택하면 자동으로 문제 생성</p>
+                    </div>
+                    <div class="tech-card">
+                        <h4>🎯 레벨별 인터페이스</h4>
+                        <p>사용자 수준에 최적화된 UI/UX 제공</p>
+                    </div>
+                    <div class="tech-card">
+                        <h4>✅ 자동 채점 시스템</h4>
+                        <p>즉각적인 정답 검증 및 상세 피드백</p>
+                    </div>
+                    <div class="tech-card">
+                        <h4>📊 학습 통계</h4>
+                        <p>강약점 시각화 및 진행도 추적</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Tech Stack -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>기술 스택</h2>
+                <div class="two-column">
+                    <div>
+                        <h3>Frontend 기술</h3>
+                        <ul>
+                            <li><strong>React</strong> - UI 라이브러리</li>
+                            <li><strong>TypeScript</strong> - 타입 안정성</li>
+                            <li><strong>Vite</strong> - 빠른 빌드 도구</li>
+                            <li><strong>Monaco Editor</strong> - 코드 에디터</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3>Backend 기술</h3>
+                        <ul>
+                            <li><strong>Node.js</strong> - 런타임 환경</li>
+                            <li><strong>Express</strong> - 웹 프레임워크</li>
+                            <li><strong>MySQL</strong> - 데이터베이스</li>
+                            <li><strong>Redis</strong> - 캐시/세션 관리</li>
+                            <li><strong>OpenAI API</strong> - AI 문제 생성</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: System Architecture -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>시스템 아키텍처</h2>
+                <div style="text-align: center; margin: 40px 0;">
+                    <div style="font-size: 1.8em; color: #667eea; font-weight: 600; margin-bottom: 30px;">
+                        Monorepo 구조
+                    </div>
+                    <div style="font-size: 1.5em; line-height: 2.5; color: #555;">
+                        <span class="highlight">사용자</span> → 
+                        <span class="highlight">Frontend (React)</span> ↔ 
+                        <span class="highlight">Backend (Express)</span> ↔ 
+                        <span class="highlight">MySQL / Redis / OpenAI</span>
+                    </div>
+                </div>
+                <div class="two-column" style="margin-top: 50px;">
+                    <div class="column">
+                        <h4>주요 컴포넌트</h4>
+                        <ul style="font-size: 1.1em;">
+                            <li>Frontend: UI/UX</li>
+                            <li>API Server: 비즈니스 로직</li>
+                            <li>Database: 데이터 저장</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h4>특징</h4>
+                        <ul style="font-size: 1.1em;">
+                            <li>확장 가능한 설계</li>
+                            <li>모듈화된 구조</li>
+                            <li>RESTful API</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Learning Levels -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>레벨별 학습 경험</h2>
+                <div class="level-card">
+                    <h3>레벨 0-1: 블록 코딩 🧩</h3>
+                    <p style="font-size: 1.2em; color: #666; line-height: 1.8;">
+                        <strong>대상:</strong> 프로그래밍 입문자<br>
+                        <strong>특징:</strong> 드래그 앤 드롭 인터페이스, 시각적 프로그래밍 블록<br>
+                        <strong>채점:</strong> 블록 구성요소 및 시퀀스 매칭
+                    </p>
+                </div>
+                <div class="level-card">
+                    <h3>레벨 2-3: 클로즈 (빈칸 채우기) ✍️</h3>
+                    <p style="font-size: 1.2em; color: #666; line-height: 1.8;">
+                        <strong>대상:</strong> 기본 문법을 배운 학습자<br>
+                        <strong>특징:</strong> 부분 완성 코드에서 핵심 키워드 채우기<br>
+                        <strong>채점:</strong> 정답 토큰 일치 검증
+                    </p>
+                </div>
+                <div class="level-card">
+                    <h3>레벨 4-5: 코드 에디터 💻</h3>
+                    <p style="font-size: 1.2em; color: #666; line-height: 1.8;">
+                        <strong>대상:</strong> 숙련된 프로그래머<br>
+                        <strong>특징:</strong> Monaco Editor 기반, 문법 하이라이팅<br>
+                        <strong>채점:</strong> 테스트케이스 기반 실행 및 판정
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Grading System -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>채점 시스템</h2>
+                <div style="margin-top: 40px;">
+                    <div class="level-card">
+                        <h3>L0-1: 블록 코딩 채점</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li>구성요소(블록) 매칭</li>
+                            <li>블록 시퀀스 순서 검증</li>
+                            <li>즉각적인 시각적 피드백</li>
+                        </ul>
+                    </div>
+                    <div class="level-card">
+                        <h3>L2-3: 클로즈 채점</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li>정답 토큰 일치 검증</li>
+                            <li>대소문자/공백 정규화</li>
+                            <li>부분 점수 부여 가능</li>
+                        </ul>
+                    </div>
+                    <div class="level-card">
+                        <h3>L4-5: 코드 실행 채점</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li>테스트케이스 기반 판정</li>
+                            <li>안전한 샌드박스 환경</li>
+                            <li>시간/메모리 제한 검증</li>
+                            <li>상세한 피드백 제공</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: API Structure -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>RESTful API 구조</h2>
+                <div style="margin-top: 40px;">
+                    <h3>주요 엔드포인트</h3>
+                    
+                    <div style="margin: 30px 0;">
+                        <h4 style="color: #667eea; font-size: 1.5em; margin-bottom: 10px;">문제 생성</h4>
+                        <div class="api-endpoint">POST /api/problems/generate</div>
+                        <p style="color: #666; font-size: 1.2em; margin-top: 10px;">레벨/주제 입력 → AI가 문제 자동 생성</p>
+                    </div>
+
+                    <div style="margin: 30px 0;">
+                        <h4 style="color: #667eea; font-size: 1.5em; margin-bottom: 10px;">답안 채점</h4>
+                        <div class="api-endpoint">POST /api/problems/grade</div>
+                        <p style="color: #666; font-size: 1.2em; margin-top: 10px;">사용자 답안 제출 및 레벨별 채점</p>
+                    </div>
+
+                    <div style="margin: 30px 0;">
+                        <h4 style="color: #667eea; font-size: 1.5em; margin-bottom: 10px;">문제 조회</h4>
+                        <div class="api-endpoint">GET /api/problems/:id</div>
+                        <p style="color: #666; font-size: 1.2em; margin-top: 10px;">특정 문제의 상세 정보 조회</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: Database Design -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>데이터베이스 설계</h2>
+                <div class="two-column" style="margin-top: 40px;">
+                    <div>
+                        <h3>주요 테이블</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li><code>users</code> - 사용자 정보</li>
+                            <li><code>problems</code> - 생성된 문제</li>
+                            <li><code>submissions</code> - 제출 답안</li>
+                            <li><code>test_cases</code> - 테스트케이스</li>
+                            <li><code>user_stats</code> - 학습 통계</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3>기술 스택</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li><strong>MySQL 8.x</strong> - 관계형 DB</li>
+                            <li><strong>Redis</strong> - 캐시 & 세션</li>
+                            <li>확장 가능한 스키마</li>
+                            <li>최적화된 인덱싱</li>
+                        </ul>
+                    </div>
+                </div>
+                <div style="margin-top: 50px; text-align: center;">
+                    <div class="badge">보안: JWT 인증</div>
+                    <div class="badge">성능: Redis 캐싱</div>
+                    <div class="badge">안정성: 트랜잭션 관리</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: Roadmap -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>개발 로드맵</h2>
+                <div class="roadmap-section">
+                    <h4 class="status-done">✅ 완료된 기능</h4>
+                    <ul style="font-size: 1.2em;">
+                        <li>문제 생성 및 채점 시스템</li>
+                        <li>레벨별 UI/UX (블록, 클로즈, 코드 에디터)</li>
+                        <li>OpenAI API 통합</li>
+                        <li>MySQL 데이터베이스 스키마</li>
+                        <li>사용자 인증 및 세션 관리</li>
+                    </ul>
+                </div>
+                <div class="roadmap-section">
+                    <h4 class="status-progress">🚀 진행 중</h4>
+                    <ul style="font-size: 1.2em;">
+                        <li>L4-5 코드 채점 시스템 고도화</li>
+                        <li>학습 통계 대시보드</li>
+                        <li>문제 품질 개선</li>
+                    </ul>
+                </div>
+                <div class="roadmap-section">
+                    <h4 class="status-planned">📋 향후 계획</h4>
+                    <ul style="font-size: 1.2em;">
+                        <li>강약점 시각화 (레이더 차트)</li>
+                        <li>Docker 컨테이너화 & CI/CD</li>
+                        <li>다국어 지원 & 모바일 앱</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 14: Conclusion -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>프로젝트 성과 및 결론</h2>
+                <div style="margin-top: 40px;">
+                    <div class="level-card">
+                        <h3>🎯 기술적 성과</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li>완전한 풀스택 웹 애플리케이션 구현</li>
+                            <li>AI 기술을 활용한 혁신적인 교육 솔루션</li>
+                            <li>확장 가능하고 유지보수 용이한 아키텍처</li>
+                        </ul>
+                    </div>
+                    <div class="level-card">
+                        <h3>📚 교육적 가치</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li>초보자부터 전문가까지 모든 수준 지원</li>
+                            <li>무한한 학습 콘텐츠 제공</li>
+                            <li>개인화된 학습 경험</li>
+                        </ul>
+                    </div>
+                    <div class="level-card" style="border-color: #48bb78; background: #f0fff4;">
+                        <h3 style="color: #48bb78;">🚀 혁신성</h3>
+                        <ul style="font-size: 1.2em;">
+                            <li><strong>세계 최초 레벨별 맞춤형 인터페이스 제공</strong></li>
+                            <li>블록 코딩부터 전문 에디터까지 완전한 학습 경로</li>
+                            <li>AI를 활용한 무한 문제 생성 시스템</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 15: Thank You -->
+        <div class="slide">
+            <div class="slide-content">
+                <div style="text-align: center;">
+                    <h2 style="color: #667eea; font-size: 3.5em; border: none; margin-bottom: 30px;">감사합니다! 🙏</h2>
+                    <p style="font-size: 1.8em; color: #666; margin-bottom: 40px;">질문이 있으시면 언제든지 문의해주세요</p>
+                    
+                    <div style="margin-top: 60px; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px;">
+                        <h3 style="color: white; font-size: 2.5em; margin-bottom: 20px;">gpters</h3>
+                        <p style="color: white; font-size: 1.8em; font-weight: 600;">모두를 위한 알고리즘 학습 플랫폼</p>
+                        <p style="color: rgba(255,255,255,0.9); font-size: 1.4em; margin-top: 20px;">
+                            블록 코딩 → 클로즈 → 코드 에디터<br>
+                            단계별 성장을 지원합니다
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-number">
+        <span id="current-slide">1</span> / <span id="total-slides">15</span>
+    </div>
+
+    <div class="navigation">
+        <button class="nav-btn" id="prev-btn" onclick="prevSlide()">◀ 이전</button>
+        <button class="nav-btn" id="next-btn" onclick="nextSlide()">다음 ▶</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        document.getElementById('total-slides').textContent = totalSlides;
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+            
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+            
+            // Update button states
+            document.getElementById('prev-btn').disabled = currentSlide === 0;
+            document.getElementById('next-btn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                showSlide(currentSlide + 1);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                showSlide(currentSlide - 1);
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        // Initialize
+        showSlide(0);
+    </script>
+</body>
+</html>

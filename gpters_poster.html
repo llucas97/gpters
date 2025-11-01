@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gpters - AI 기반의 알고리즘 학습 플랫폼</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: white;
+            padding: 0;
+            margin: 0;
+        }
+
+        .poster-container {
+            width: 10000px;
+            height: 11000px;
+            margin: 0 auto;
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 200px 250px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-content {
+            flex: 1;
+        }
+
+        .logo {
+            width: 400px;
+            height: 400px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 180px;
+            font-weight: bold;
+            color: #667eea;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            margin-right: 100px;
+            flex-shrink: 0;
+        }
+
+        .title {
+            font-size: 180px;
+            font-weight: 800;
+            margin-bottom: 50px;
+            text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            font-size: 80px;
+            font-weight: 400;
+            opacity: 0.95;
+            line-height: 1.4;
+        }
+
+        .header-info {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 80px 100px;
+            border-radius: 40px;
+            min-width: 1000px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            font-size: 60px;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 600;
+        }
+
+        .qr-code {
+            width: 350px;
+            height: 350px;
+            background: white;
+            border-radius: 30px;
+            margin-left: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            text-align: center;
+            color: #666;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            flex-shrink: 0;
+        }
+
+        .content {
+            padding: 200px 250px;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 150px;
+            margin-bottom: 200px;
+        }
+
+        .section {
+            margin-bottom: 200px;
+        }
+
+        .section-title {
+            font-size: 120px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 100px;
+            padding-bottom: 40px;
+            border-bottom: 8px solid #667eea;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 80px;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 100px;
+            border-radius: 60px;
+            color: white;
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+        }
+
+        .feature-icon {
+            width: 250px;
+            height: 250px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 100px;
+            margin-bottom: 60px;
+            font-weight: bold;
+        }
+
+        .feature-title {
+            font-size: 80px;
+            font-weight: 700;
+            margin-bottom: 50px;
+        }
+
+        .feature-desc {
+            font-size: 60px;
+            line-height: 1.6;
+            opacity: 0.95;
+        }
+
+        .key-features {
+            background: #f8f9ff;
+            padding: 120px;
+            border-radius: 60px;
+            margin-bottom: 100px;
+        }
+
+        .key-features h3 {
+            font-size: 100px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 80px;
+        }
+
+        .key-features ul {
+            list-style: none;
+        }
+
+        .key-features li {
+            font-size: 65px;
+            line-height: 2;
+            padding-left: 100px;
+            position: relative;
+            color: #333;
+        }
+
+        .key-features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 80px;
+        }
+
+        .tech-stack {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8ebff 100%);
+            padding: 120px;
+            border-radius: 60px;
+        }
+
+        .tech-stack h3 {
+            font-size: 100px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 80px;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 100px;
+        }
+
+        .tech-category {
+            background: white;
+            padding: 100px;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        .tech-category h4 {
+            font-size: 80px;
+            font-weight: 700;
+            color: #764ba2;
+            margin-bottom: 60px;
+        }
+
+        .tech-category p {
+            font-size: 60px;
+            line-height: 1.8;
+            color: #555;
+        }
+
+        .architecture {
+            background: white;
+            padding: 0;
+            border-radius: 60px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .architecture h3 {
+            font-size: 100px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 80px;
+            text-align: center;
+        }
+
+        .architecture-diagram {
+            background: white;
+            padding: 0;
+            border-radius: 0;
+            text-align: center;
+            font-size: 60px;
+            color: #666;
+            min-height: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .screenshots {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 150px;
+        }
+
+        .screenshot-card {
+            background: white;
+            padding: 80px;
+            border-radius: 60px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .screenshot-card h4 {
+            font-size: 90px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 70px;
+            text-align: center;
+        }
+
+        .screenshot-placeholder {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8ebff 100%);
+            border-radius: 50px;
+            padding: 250px 80px;
+            text-align: center;
+            color: #764ba2;
+            font-size: 70px;
+            border: 5px dashed #667eea;
+            line-height: 1.6;
+        }
+
+        .level-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px;
+            border-radius: 50px;
+            margin-bottom: 100px;
+        }
+
+        .level-info h4 {
+            font-size: 90px;
+            margin-bottom: 60px;
+        }
+
+        .level-info ul {
+            list-style: none;
+            font-size: 65px;
+            line-height: 2;
+        }
+
+        .level-info li:before {
+            content: "▸";
+            margin-right: 30px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="poster-container">
+        <!-- Header -->
+        <div class="header">
+            <div style="display: flex; align-items: center; flex: 1;">
+                <div class="logo">GP</div>
+                <div class="header-content">
+                    <h1 class="title">gpters: AI 기반의 알고리즘 학습 플랫폼</h1>
+                    <p class="subtitle">문제 생성·풀이·채점을 통한 지능형 알고리즘 학습 시스템</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <div class="header-info">
+                    <div class="info-row">
+                        <span class="info-label">팀원</span>
+                        <span>이기호, 손재이, 정태경</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">지도교수</span>
+                        <span>김진우 교수님</span>
+                    </div>
+                </div>
+                <div class="qr-code">
+                    QR Code<br/>
+                    (GitHub)
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- 2단 레이아웃: 프로젝트 소개 + 주요 기능 -->
+            <div class="two-column">
+                <!-- 왼쪽: 프로젝트 소개 -->
+                <div>
+                    <h2 class="section-title">프로젝트 소개</h2>
+                    <div class="features-grid">
+                        <div class="feature-card" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 20px 60px rgba(59, 130, 246, 0.3);">
+                            <div class="feature-icon">배경</div>
+                            <div class="feature-title">문제 해결의 필요성</div>
+                            <div class="feature-desc">
+                                <strong>주요 문제점:</strong><br/>
+                                • 알고리즘 학습 초기 진입 장벽이 높음<br/>
+                                • 학습자 수준에 맞는 맞춤형 문제 부족<br/>
+                                • 즉각적인 피드백 시스템의 부재<br/>
+                                • 단계별 난이도 조절 어려움<br/>
+                                <br/>
+                                <strong>해결 필요성:</strong><br/>
+                                • 개인화된 학습 경로 제공<br/>
+                                • AI 기반 문제 생성 및 채점<br/>
+                                • 실시간 학습 분석 및 피드백
+                            </div>
+                        </div>
+                        <div class="feature-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 20px 60px rgba(16, 185, 129, 0.3);">
+                            <div class="feature-icon">해결</div>
+                            <div class="feature-title">AI 기반 학습 시스템</div>
+                            <div class="feature-desc">
+                                <strong>핵심 솔루션:</strong><br/>
+                                • OpenAI GPT를 활용한 문제 자동 생성<br/>
+                                • 레벨 0-5 단계별 맞춤형 인터페이스<br/>
+                                • 블록코딩 → 클로즈 → 코딩의 점진적 학습<br/>
+                                <br/>
+                                <strong>주요 특징:</strong><br/>
+                                • 사용자 수준에 따른 난이도 자동 조절<br/>
+                                • 즉각적인 채점 및 상세 피드백<br/>
+                                • 학습 데이터 기반 약점 분석<br/>
+                                • 경험치 시스템으로 동기부여
+                            </div>
+                        </div>
+                        <div class="feature-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 20px 60px rgba(245, 158, 11, 0.3);">
+                            <div class="feature-icon">목표</div>
+                            <div class="feature-title">효과적인 학습 경험</div>
+                            <div class="feature-desc">
+                                <strong>목표 사용자:</strong><br/>
+                                • 초보자: 블록코딩으로 개념 이해<br/>
+                                • 중급자: 클로즈 문제로 실력 향상<br/>
+                                • 고급자: 실전 코딩으로 마스터<br/>
+                                <br/>
+                                <strong>기대 효과:</strong><br/>
+                                • 알고리즘 학습 시간 50% 단축<br/>
+                                • 개인 맞춤형 학습 경로 제공<br/>
+                                • 체계적인 실력 향상 지원<br/>
+                                • 지속적인 학습 동기 부여
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 오른쪽: 주요 기능 -->
+                <div>
+                    <h2 class="section-title">주요 기능</h2>
+                    
+                    <div class="level-info">
+                        <h4>📊 레벨별 학습 시스템</h4>
+                        <ul>
+                            <li><strong>레벨 0-1 (입문):</strong> 드래그 앤 드롭 블록 코딩으로 알고리즘 개념 학습, 시각적 피드백 제공</li>
+                            <li><strong>레벨 2-3 (중급):</strong> 빈칸 채우기 방식으로 코드 구조 이해, 핵심 로직 작성 연습</li>
+                            <li><strong>레벨 4-5 (고급):</strong> 실전 코딩 환경에서 완전한 알고리즘 구현, 테스트 케이스 검증</li>
+                        </ul>
+                    </div>
+
+                    <div class="key-features">
+                        <h3>🎯 AI 기반 문제 생성 시스템</h3>
+                        <ul>
+                            <li><strong>OpenAI GPT-4 활용:</strong> 사용자 레벨과 학습 이력을 분석하여 최적화된 문제 자동 생성</li>
+                            <li><strong>동적 난이도 조절:</strong> 정답률과 풀이 시간을 기반으로 실시간 난이도 자동 조정</li>
+                            <li><strong>다양한 알고리즘:</strong> 정렬, 탐색, DP, 그래프 등 30+ 주제별 문제 제공</li>
+                            <li><strong>맞춤형 학습:</strong> 약점 분석을 통한 집중 학습 문제 추천</li>
+                        </ul>
+                    </div>
+
+                    <div class="key-features">
+                        <h3>✍️ 다단계 학습 인터페이스</h3>
+                        <ul>
+                            <li><strong>블록 코딩:</strong> Blockly 기반 시각적 프로그래밍, 초보자도 쉽게 접근</li>
+                            <li><strong>클로즈 문제:</strong> 코드의 핵심 부분만 작성하여 효율적 학습</li>
+                            <li><strong>Monaco Editor:</strong> VS Code와 동일한 에디터로 실전 코딩 환경 제공</li>
+                            <li><strong>실시간 힌트:</strong> 막힐 때 단계별 힌트 시스템 지원</li>
+                        </ul>
+                    </div>
+
+                    <div class="key-features">
+                        <h3>📈 지능형 채점 및 분석</h3>
+                        <ul>
+                            <li><strong>자동 채점:</strong> 테스트 케이스 기반 즉시 채점, 정확도·효율성 평가</li>
+                            <li><strong>상세 피드백:</strong> 오답 분석 및 개선 방향 제시</li>
+                            <li><strong>학습 분석:</strong> 레이더 차트로 알고리즘 유형별 강약점 시각화</li>
+                            <li><strong>경험치 시스템:</strong> 게임화 요소로 지속적 학습 동기 부여</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 시스템 아키텍처 -->
+            <div class="section">
+                <h2 class="section-title">시스템 아키텍처</h2>
+                <div class="architecture">
+                    <svg width="9200" height="2000" viewBox="0 0 3800 1400" preserveAspectRatio="xMidYMid meet" style="background: white; border-radius: 50px; display: block; margin: 0 auto;">
+                        <!-- User -->
+                        <g>
+                            <circle cx="200" cy="700" r="80" fill="#667eea"/>
+                            <circle cx="200" cy="650" r="45" fill="white"/>
+                            <path d="M 160 700 Q 160 730 200 730 Q 240 730 240 700" fill="white"/>
+                            <text x="200" y="850" text-anchor="middle" font-size="55" font-weight="bold" fill="#333">사용자</text>
+                            <text x="200" y="920" text-anchor="middle" font-size="40" fill="#666">User</text>
+                        </g>
+
+                        <!-- Arrow right -->
+                        <line x1="320" y1="700" x2="480" y2="700" stroke="#667eea" stroke-width="10" marker-end="url(#arrowhead-right)"/>
+
+                        <!-- Frontend Layer -->
+                        <rect x="500" y="100" width="800" height="1200" rx="40" fill="#f0f4ff" stroke="#667eea" stroke-width="8"/>
+                        <text x="900" y="200" text-anchor="middle" font-size="75" font-weight="bold" fill="#667eea">Frontend</text>
+                        
+                        <!-- React -->
+                        <rect x="600" y="300" width="600" height="250" rx="30" fill="white" stroke="#61dafb" stroke-width="6"/>
+                        <circle cx="900" cy="390" r="50" fill="none" stroke="#61dafb" stroke-width="6"/>
+                        <circle cx="900" cy="390" r="12" fill="#61dafb"/>
+                        <ellipse cx="900" cy="390" rx="18" ry="42" fill="none" stroke="#61dafb" stroke-width="6"/>
+                        <ellipse cx="900" cy="390" rx="42" ry="18" fill="none" stroke="#61dafb" stroke-width="6"/>
+                        <text x="900" y="510" text-anchor="middle" font-size="55" font-weight="bold" fill="#333">React 18</text>
+
+                        <!-- TypeScript -->
+                        <rect x="600" y="600" width="600" height="250" rx="30" fill="white" stroke="#3178c6" stroke-width="6"/>
+                        <rect x="820" y="660" width="160" height="140" rx="15" fill="#3178c6"/>
+                        <text x="900" y="760" text-anchor="middle" font-size="85" font-weight="bold" fill="white">TS</text>
+
+                        <!-- Monaco -->
+                        <rect x="600" y="900" width="600" height="250" rx="30" fill="white" stroke="#2c2c32" stroke-width="6"/>
+                        <rect x="780" y="960" width="240" height="130" rx="10" fill="#2c2c32"/>
+                        <line x1="810" y1="1000" x2="990" y2="1000" stroke="#4ec9b0" stroke-width="5"/>
+                        <line x1="810" y1="1045" x2="950" y2="1045" stroke="#569cd6" stroke-width="5"/>
+                        <line x1="810" y1="1080" x2="970" y2="1080" stroke="#dcdcaa" stroke-width="5"/>
+
+                        <!-- Arrow right -->
+                        <line x1="1320" y1="700" x2="1480" y2="700" stroke="#667eea" stroke-width="10" marker-end="url(#arrowhead-right)"/>
+
+
+                        <!-- Backend Layer -->
+                        <rect x="1500" y="100" width="800" height="1200" rx="40" fill="#fff4e6" stroke="#f59e0b" stroke-width="8"/>
+                        <text x="1900" y="200" text-anchor="middle" font-size="75" font-weight="bold" fill="#f59e0b">Backend</text>
+
+                        <!-- Node.js -->
+                        <rect x="1600" y="300" width="600" height="250" rx="30" fill="white" stroke="#68a063" stroke-width="6"/>
+                        <path d="M 1900 360 L 1960 390 L 1960 470 L 1900 500 L 1840 470 L 1840 390 Z" fill="#68a063"/>
+                        <text x="1900" y="530" text-anchor="middle" font-size="55" font-weight="bold" fill="#333">Node.js 18</text>
+
+                        <!-- Express -->
+                        <rect x="1600" y="600" width="600" height="250" rx="30" fill="white" stroke="#000" stroke-width="6"/>
+                        <rect x="1820" y="660" width="160" height="140" rx="15" fill="#000"/>
+                        <text x="1900" y="760" text-anchor="middle" font-size="90" font-weight="bold" fill="white">E</text>
+
+                        <!-- OpenAI -->
+                        <rect x="1600" y="900" width="600" height="250" rx="30" fill="white" stroke="#10a37f" stroke-width="6"/>
+                        <circle cx="1900" cy="1000" r="60" fill="#10a37f"/>
+                        <path d="M 1885 990 Q 1900 975 1915 990 L 1915 1010 Q 1900 1025 1885 1010 Z" fill="white"/>
+                        <text x="1900" y="1130" text-anchor="middle" font-size="48" font-weight="bold" fill="#333">OpenAI GPT-4</text>
+
+                        <!-- Arrow right -->
+                        <line x1="2320" y1="700" x2="2480" y2="700" stroke="#667eea" stroke-width="10" marker-end="url(#arrowhead-right)"/>
+
+                        <!-- Database Layer -->
+                        <rect x="2500" y="100" width="1200" height="1200" rx="40" fill="#e8f5e9" stroke="#4caf50" stroke-width="8"/>
+                        <text x="3100" y="200" text-anchor="middle" font-size="75" font-weight="bold" fill="#4caf50">Database</text>
+
+                        <!-- MySQL -->
+                        <rect x="2700" y="350" width="800" height="300" rx="30" fill="white" stroke="#00618a" stroke-width="6"/>
+                        <circle cx="3100" cy="480" r="70" fill="#00618a"/>
+                        <circle cx="3100" cy="480" r="45" fill="white"/>
+                        <circle cx="3100" cy="480" r="20" fill="#00618a"/>
+                        <text x="3100" y="610" text-anchor="middle" font-size="60" font-weight="bold" fill="#333">MySQL 8.x</text>
+
+                        <!-- Storage items -->
+                        <text x="2700" y="750" font-size="50" fill="#666">📦 저장 데이터:</text>
+                        <text x="2750" y="830" font-size="45" fill="#555">• 사용자 정보</text>
+                        <text x="2750" y="900" font-size="45" fill="#555">• 문제 데이터</text>
+                        <text x="2750" y="970" font-size="45" fill="#555">• 학습 기록</text>
+                        <text x="3200" y="830" font-size="45" fill="#555">• 채점 결과</text>
+                        <text x="3200" y="900" font-size="45" fill="#555">• 통계 데이터</text>
+                        <text x="3200" y="970" font-size="45" fill="#555">• 세션 정보</text>
+
+                        <!-- Tech Labels -->
+                        <text x="900" y="820" text-anchor="middle" font-size="48" font-weight="bold" fill="#333">TypeScript</text>
+                        <text x="900" y="1120" text-anchor="middle" font-size="48" font-weight="bold" fill="#333">Monaco Editor</text>
+                        <text x="1900" y="820" text-anchor="middle" font-size="48" font-weight="bold" fill="#333">Express</text>
+                        
+                        <!-- Additional tech info -->
+                        <text x="900" y="280" text-anchor="middle" font-size="38" fill="#666">+ Vite, Ant Design, Recharts</text>
+                        <text x="1900" y="280" text-anchor="middle" font-size="38" fill="#666">+ JWT, Passport.js</text>
+                        <text x="3100" y="280" text-anchor="middle" font-size="38" fill="#666">관계형 데이터베이스</text>
+
+                        <!-- Arrow marker definition -->
+                        <defs>
+                            <marker id="arrowhead-right" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto">
+                                <polygon points="0 0, 12 6, 0 12" fill="#667eea"/>
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+
+                <!-- 기술 스택 상세 설명 -->
+                <div class="tech-stack" style="margin-top: 150px; padding: 150px 120px;">
+                    <h3>🛠️ 기술 스택 상세 정보</h3>
+                    <div class="tech-grid">
+                        <div class="tech-category">
+                            <h4>Frontend 기술</h4>
+                            <p>
+                                <strong>React 18:</strong> 컴포넌트 기반 UI 개발, Hooks를 활용한 상태 관리<br/>
+                                <strong>TypeScript 5:</strong> 타입 안정성 보장, 개발 생산성 향상<br/>
+                                <strong>Vite:</strong> 고속 빌드 및 HMR 지원 개발 서버<br/>
+                                <strong>Monaco Editor:</strong> VS Code 기반 코드 에디터 컴포넌트<br/>
+                                <strong>Ant Design 5:</strong> 엔터프라이즈급 UI 컴포넌트 라이브러리<br/>
+                                <strong>Recharts:</strong> React 기반 차트 라이브러리로 데이터 시각화
+                            </p>
+                        </div>
+                        <div class="tech-category">
+                            <h4>Backend 기술</h4>
+                            <p>
+                                <strong>Node.js 18+:</strong> 비동기 I/O 기반 서버 사이드 JavaScript 런타임<br/>
+                                <strong>Express 4:</strong> 경량 웹 프레임워크, RESTful API 구현<br/>
+                                <strong>JWT:</strong> 토큰 기반 무상태 인증 시스템<br/>
+                                <strong>Passport.js:</strong> 다양한 인증 전략 지원 미들웨어<br/>
+                                <strong>OpenAI GPT-4:</strong> AI 기반 문제 자동 생성 및 채점<br/>
+                                <strong>MySQL 8.x:</strong> 관계형 데이터베이스, 트랜잭션 지원
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 화면 구성 -->
+            <div class="section">
+                <h2 class="section-title">주요 화면 구성</h2>
+                <div class="screenshots">
+                    <div class="screenshot-card">
+                        <h4>🎮 학습 인터페이스 화면</h4>
+                        <div class="screenshot-placeholder">
+                            <strong style="font-size: 85px; color: #667eea;">레벨별 맞춤 UI</strong><br/><br/>
+                            
+                            <div style="text-align: left; padding: 0 80px; line-height: 1.8;">
+                                <strong>• 블록 코딩 (레벨 0-1)</strong><br/>
+                                드래그 앤 드롭으로 블록 조립<br/>
+                                실시간 시각적 피드백<br/><br/>
+                                
+                                <strong>• 클로즈 문제 (레벨 2-3)</strong><br/>
+                                코드 구조 이해 및 핵심 로직 작성<br/>
+                                자동 완성 및 힌트 제공<br/><br/>
+                                
+                                <strong>• 코드 에디터 (레벨 4-5)</strong><br/>
+                                Monaco Editor 기반 실전 환경<br/>
+                                실시간 오류 검사 및 디버깅
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screenshot-card">
+                        <h4>📊 학습 분석 대시보드</h4>
+                        <div class="screenshot-placeholder">
+                            <strong style="font-size: 85px; color: #667eea;">통계 및 분석</strong><br/><br/>
+                            
+                            <div style="text-align: left; padding: 0 80px; line-height: 1.8;">
+                                <strong>• 학습 통계</strong><br/>
+                                총 풀이 수, 정답률, 평균 시간<br/>
+                                일일/주간/월간 학습량 그래프<br/><br/>
+                                
+                                <strong>• 레이더 차트</strong><br/>
+                                알고리즘 유형별 숙련도 시각화<br/>
+                                강점/약점 영역 한눈에 파악<br/><br/>
+                                
+                                <strong>• 성장 추적</strong><br/>
+                                레벨별 진행률 및 경험치<br/>
+                                맞춤형 학습 목표 제안
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 추가 기능 설명 -->
+                <div class="key-features" style="margin-top: 150px;">
+                    <h3>💡 기대 효과 및 활용 방안</h3>
+                    <ul>
+                        <li><strong>교육 기관:</strong> 학생들의 코딩 교육에 활용, 개인별 학습 진도 관리 및 평가 자료로 활용</li>
+                        <li><strong>취업 준비생:</strong> 코딩 테스트 대비, 알고리즘 실력 향상을 위한 체계적 학습 도구</li>
+                        <li><strong>자기 계발:</strong> 프로그래밍 능력 향상, 논리적 사고력 강화 및 문제 해결 능력 개발</li>
+                        <li><strong>학습 효율화:</strong> AI 기반 맞춤형 문제로 불필요한 학습 시간 감소, 효율적인 실력 향상</li>
+                    </ul>
+                </div>
+
+                <!-- 향후 계획 -->
+                <div class="key-features">
+                    <h3>🚀 향후 개발 계획</h3>
+                    <ul>
+                        <li><strong>다국어 지원:</strong> 영어, 일본어 등 다양한 언어로 서비스 확장</li>
+                        <li><strong>협업 기능:</strong> 실시간 코드 리뷰 및 페어 프로그래밍 기능 추가</li>
+                        <li><strong>모바일 앱:</strong> iOS/Android 네이티브 앱 개발로 접근성 향상</li>
+                        <li><strong>경쟁 모드:</strong> 실시간 대결 및 리더보드를 통한 동기 부여 강화</li>
+                        <li><strong>AI 튜터:</strong> GPT 기반 1:1 학습 멘토링 시스템 구축</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
