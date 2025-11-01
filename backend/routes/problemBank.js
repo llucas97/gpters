@@ -5,8 +5,6 @@ const router = express.Router();
 const db = require('../models');
 const { Op } = require('sequelize');
 const { generateProblem } = require('../services/openaiProblemGen');
-const { generateCodeOrderingProblem } = require('../services/openaiCodeOrdering');
-const { generateBugFixProblem } = require('../services/openaiDebugFix');
 const CodeValidator = require('../services/codeValidator');
 
 function guardDb(req, res) {
@@ -55,17 +53,6 @@ router.post('/generate', async (req, res) => {
       code: payload.code || payload.correctCode || payload.buggyCode || '',
       blanks: payload.blanks || []
     };
-
-    // 레벨 4-5는 템플릿 코드와 테스트 케이스 저장
-    if (level === 4 || level === 5) {
-      dbData.metadata = {
-        type: 'template_code',
-        templateCode: payload.templateCode || payload.code_template || '',
-        testCases: payload.testCases || [],
-        instruction: payload.instruction || '빈 줄에 코드를 작성하세요.',
-        blankCount: level === 4 ? 1 : 2
-      };
-    }
 
     const created = await db.ProblemBank.create(dbData);
 
@@ -119,61 +106,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// 코드 검증 API (레벨 4-5용)
-router.post('/validate-code', async (req, res) => {
-  try {
-    if (!guardDb(req, res)) return;
-    
-    const { problemId, userCode, language } = req.body;
-    
-    if (!problemId || !userCode || !language) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: problemId, userCode, language' 
-      });
-    }
-    
-    // 문제 정보 조회
-    const problem = await db.ProblemBank.findByPk(problemId);
-    if (!problem) {
-      return res.status(404).json({ error: 'Problem not found' });
-    }
-    
-    // 메타데이터에서 테스트 케이스 추출
-    const metadata = problem.metadata || {};
-    const testCases = metadata.testCases || [];
-    
-    if (testCases.length === 0) {
-      return res.status(400).json({ 
-        error: 'No test cases found for this problem' 
-      });
-    }
-    
-    console.log(`[problem-bank/validate-code] 검증 시작 - 문제 ID: ${problemId}, 언어: ${language}`);
-    console.log(`[problem-bank/validate-code] 테스트 케이스 개수: ${testCases.length}`);
-    
-    // 코드 검증 실행
-    const validationResult = CodeValidator.validate(language, userCode, testCases);
-    
-    // 결과 로그
-    console.log(`[problem-bank/validate-code] 검증 완료:`, {
-      success: validationResult.success,
-      allPassed: validationResult.allPassed,
-      score: validationResult.score
-    });
-    
-    res.json({
-      success: true,
-      validation: validationResult,
-      problemTitle: problem.title
-    });
-    
-  } catch (error) {
-    console.error('[problem-bank/validate-code] error:', error);
-    res.status(500).json({ 
-      error: 'internal_error', 
-      detail: String(error.message || error) 
-    });
-  }
-});
+// 레거시: 코드 검증 API 제거됨 (레벨 4-5가 키워드/메소드 입력 방식으로 변경됨)
 
 module.exports = router;

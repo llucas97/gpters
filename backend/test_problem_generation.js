@@ -13,8 +13,6 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }
 
 const { generateProblem } = require('./services/openaiProblemGen');
 const { generateBlockCodingProblem } = require('./services/openaiBlockCoding');
-const { generateCodeOrderingProblem } = require('./services/openaiCodeOrdering');
-const { generateBugFixProblem } = require('./services/openaiDebugFix');
 const { validateProblem, detectProblemType, formatValidationResult } = require('./services/problemValidator');
 
 // 테스트 결과 저장
@@ -41,13 +39,13 @@ function checkApiKey() {
   console.log('✅ OPENAI_API_KEY 확인됨\n');
 }
 
-// 레벨 0-3: Cloze 문제 테스트
+// 레벨 0-5: Cloze 문제 테스트
 async function testClozeProblems() {
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('📝 Cloze 문제 (빈칸 채우기) 생성 테스트');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
-  const levels = [0, 1, 2, 3];
+  const levels = [0, 1, 3, 4, 5]; // 레벨 2는 블록코딩 전용
   
   for (const level of levels) {
     try {
@@ -87,13 +85,13 @@ async function testClozeProblems() {
   }
 }
 
-// 레벨 0-1: 블록 코딩 문제 테스트
+// 레벨 0-2: 블록 코딩 문제 테스트
 async function testBlockCodingProblems() {
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🧩 블록 코딩 문제 생성 테스트');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
-  const levels = [0, 1];
+  const levels = [0, 1, 2];
   
   for (const level of levels) {
     try {
@@ -130,88 +128,7 @@ async function testBlockCodingProblems() {
   }
 }
 
-// 레벨 4: 코드 순서 맞추기 문제 테스트
-async function testCodeOrderingProblems() {
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🔀 코드 순서 맞추기 문제 생성 테스트');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
-  try {
-    console.log('\n[레벨 4] 코드 순서 맞추기 문제 생성 중...');
-    const problem = await generateCodeOrderingProblem({
-      level: 4,
-      topic: 'algorithm',
-      language: 'javascript'
-    });
-    
-    console.log(`   제목: ${problem.title}`);
-    console.log(`   라인 개수: ${problem.totalLines}`);
-    
-    // 검증
-    const problemType = detectProblemType(problem);
-    const validation = validateProblem(problem, problemType);
-    const result = formatValidationResult(validation, problemType);
-    
-    if (result.success) {
-      logTest('레벨 4 코드 순서 맞추기 문제 생성', true, `라인: ${problem.totalLines}개`);
-    } else {
-      logTest('레벨 4 코드 순서 맞추기 문제 생성', false, result.errors.join(', '));
-      console.log('   검증 오류:', result.errors);
-    }
-    
-    // 섞인 코드 일부 출력
-    console.log(`\n   섞인 코드 샘플 (첫 3줄):`);
-    problem.shuffledLines.slice(0, 3).forEach((line, i) => {
-      console.log(`     ${i + 1}. ${line.trim()}`);
-    });
-    
-  } catch (error) {
-    logTest('레벨 4 코드 순서 맞추기 문제 생성', false, error.message);
-    console.error('   오류:', error.message);
-  }
-}
-
-// 레벨 5: 버그 수정 문제 테스트
-async function testBugFixProblems() {
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🐛 버그 수정 문제 생성 테스트');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
-  try {
-    console.log('\n[레벨 5] 버그 수정 문제 생성 중...');
-    const problem = await generateBugFixProblem({
-      level: 5,
-      topic: 'algorithm',
-      language: 'javascript'
-    });
-    
-    console.log(`   제목: ${problem.title}`);
-    console.log(`   버그 설명: ${problem.bugDescription}`);
-    console.log(`   버그 라인: ${problem.buggyLineNumber}`);
-    
-    // 검증
-    const problemType = detectProblemType(problem);
-    const validation = validateProblem(problem, problemType);
-    const result = formatValidationResult(validation, problemType);
-    
-    if (result.success) {
-      logTest('레벨 5 버그 수정 문제 생성', true, problem.bugDescription);
-    } else {
-      logTest('레벨 5 버그 수정 문제 생성', false, result.errors.join(', '));
-      console.log('   검증 오류:', result.errors);
-    }
-    
-    // 버그 코드 일부 출력
-    console.log(`\n   버그 코드 샘플 (첫 5줄):`);
-    problem.buggyCode.split('\n').slice(0, 5).forEach((line, i) => {
-      console.log(`     ${i + 1}. ${line}`);
-    });
-    
-  } catch (error) {
-    logTest('레벨 5 버그 수정 문제 생성', false, error.message);
-    console.error('   오류:', error.message);
-  }
-}
+// 레거시: 템플릿 코드 테스트 제거됨 (레벨 4-5가 Cloze 방식으로 통합됨)
 
 // 메인 테스트 실행
 async function runAllTests() {
@@ -226,10 +143,8 @@ async function runAllTests() {
   
   try {
     // 각 문제 유형별 테스트 실행
-    await testClozeProblems();          // 레벨 0-3
-    await testBlockCodingProblems();    // 레벨 0-1
-    await testCodeOrderingProblems();   // 레벨 4
-    await testBugFixProblems();         // 레벨 5
+    await testClozeProblems();          // 레벨 0-1, 3-5 (빈칸 채우기)
+    await testBlockCodingProblems();    // 레벨 0-2 (블록코딩 전용)
     
     // 최종 결과 출력
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

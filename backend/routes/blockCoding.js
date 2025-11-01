@@ -1,3 +1,5 @@
+//backend/routes/blockCoding.js - 블록코딩 문제 생성/검증/힌트 API
+
 const express = require('express');
 const router = express.Router();
 const { generateBlockCodingProblem } = require('../services/openaiBlockCoding');

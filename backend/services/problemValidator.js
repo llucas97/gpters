@@ -71,8 +71,8 @@ function validateCloze(problem) {
       errors.push(`블랭크 ${index + 1}의 정답이 누락되었습니다`);
     }
     
-    // 레벨 0-1은 단일 단어만 허용
-    if (level <= 1) {
+    // 레벨 0-2는 단일 단어만 허용
+    if (level <= 2) {
       const hasSpaces = /\s/.test(blank.answer);
       const hasSpecialChars = /[\(\)\[\]\{\}\+\-\*\/\=\<\>\!\&\|\,\.]/.test(blank.answer);
       
@@ -143,132 +143,14 @@ function validateBlockCoding(problem) {
 }
 
 /**
- * 코드 순서 맞추기 문제 검증
+ * 레거시 함수들 제거됨:
+ * - validateCodeOrdering (레벨 4가 템플릿 코드로 변경)
+ * - validateBugFix (레벨 5가 템플릿 코드로 변경)
  */
-function validateCodeOrdering(problem) {
-  const errors = [];
-  const { correctCode, shuffledLines, correctOrder, totalLines } = problem;
-  
-  if (!correctCode || correctCode.trim().length === 0) {
-    errors.push('정답 코드가 누락되었습니다');
-  }
-  
-  if (!shuffledLines || !Array.isArray(shuffledLines) || shuffledLines.length === 0) {
-    errors.push('섞인 코드 라인이 누락되었습니다');
-  }
-  
-  if (!correctOrder || !Array.isArray(correctOrder) || correctOrder.length === 0) {
-    errors.push('정답 순서 정보가 누락되었습니다');
-  }
-  
-  // 라인 개수 검증
-  if (shuffledLines && correctOrder && shuffledLines.length !== correctOrder.length) {
-    errors.push(`섞인 라인 개수(${shuffledLines.length})와 정답 순서 개수(${correctOrder.length})가 일치하지 않습니다`);
-  }
-  
-  // 최소 라인 개수 검증
-  if (totalLines < 3) {
-    errors.push(`순서 맞추기 문제는 최소 3줄 이상이어야 하지만 ${totalLines}줄만 생성되었습니다`);
-  }
-  
-  // 섞인 상태 검증 (정답과 같으면 안됨)
-  if (shuffledLines && correctOrder) {
-    const isSame = shuffledLines.every((line, index) => 
-      line.trim() === correctOrder[index]?.trim()
-    );
-    
-    if (isSame) {
-      errors.push('섞인 라인이 정답 순서와 동일합니다. 재생성이 필요합니다');
-    }
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-}
 
 /**
- * 버그 수정 문제 검증
+ * 레거시: validateTemplateCode 제거됨 (레벨 4-5가 Cloze 방식으로 변경)
  */
-function validateBugFix(problem) {
-  const errors = [];
-  const { correctCode, buggyCode, bugDescription, bugInserted } = problem;
-  
-  if (!correctCode || correctCode.trim().length === 0) {
-    errors.push('정답 코드가 누락되었습니다');
-  }
-  
-  if (!buggyCode || buggyCode.trim().length === 0) {
-    errors.push('버그가 있는 코드가 누락되었습니다');
-  }
-  
-  if (!bugDescription) {
-    errors.push('버그 설명이 누락되었습니다');
-  }
-  
-  // 버그 삽입 여부 검증
-  if (bugInserted === false) {
-    errors.push('버그 삽입에 실패했습니다');
-  }
-  
-  // 정답 코드와 버그 코드가 다른지 검증
-  if (correctCode && buggyCode) {
-    const normalizeCode = (code) => code.replace(/\s+/g, ' ').trim();
-    
-    if (normalizeCode(correctCode) === normalizeCode(buggyCode)) {
-      errors.push('정답 코드와 버그 코드가 동일합니다. 버그가 제대로 삽입되지 않았습니다');
-    }
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-}
-
-/**
- * 템플릿 코드 문제 검증 (레벨 4-5)
- */
-function validateTemplateCode(problem) {
-  const errors = [];
-  const { templateCode, testCases, level } = problem;
-  
-  if (!templateCode || templateCode.trim().length === 0) {
-    errors.push('템플릿 코드가 누락되었습니다');
-  }
-  
-  // 레벨별 블랭크 개수 검증
-  const expectedBlankCount = level === 4 ? 1 : level === 5 ? 2 : 0;
-  
-  if (expectedBlankCount > 0 && templateCode) {
-    const blankRegex = /\/\/\s*BLANK_\d+/g;
-    const blanks = templateCode.match(blankRegex) || [];
-    
-    if (blanks.length !== expectedBlankCount) {
-      errors.push(`레벨 ${level}은 ${expectedBlankCount}개의 BLANK 주석이 필요하지만 ${blanks.length}개가 발견되었습니다`);
-    }
-  }
-  
-  // 테스트 케이스 검증
-  if (!testCases || !Array.isArray(testCases) || testCases.length === 0) {
-    errors.push('테스트 케이스가 누락되었습니다');
-  } else {
-    testCases.forEach((testCase, index) => {
-      if (testCase.input === undefined) {
-        errors.push(`테스트 케이스 ${index + 1}의 input이 누락되었습니다`);
-      }
-      if (testCase.expected_output === undefined) {
-        errors.push(`테스트 케이스 ${index + 1}의 expected_output이 누락되었습니다`);
-      }
-    });
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-}
 
 /**
  * 메인 검증 함수
@@ -290,15 +172,6 @@ function validateProblem(problem, problemType) {
     case 'block_coding':
       typeValidation = validateBlockCoding(problem);
       break;
-    case 'code_ordering':
-      typeValidation = validateCodeOrdering(problem);
-      break;
-    case 'bug_fixing':
-      typeValidation = validateBugFix(problem);
-      break;
-    case 'template_code':
-      typeValidation = validateTemplateCode(problem);
-      break;
     default:
       typeValidation = { isValid: true, errors: [], warnings: ['알 수 없는 문제 유형입니다'] };
   }
@@ -316,15 +189,6 @@ function validateProblem(problem, problemType) {
 function detectProblemType(problem) {
   if (problem.blankedCode && problem.blocks) {
     return 'block_coding';
-  }
-  if (problem.shuffledLines && problem.correctOrder) {
-    return 'code_ordering';
-  }
-  if (problem.buggyCode && problem.correctCode) {
-    return 'bug_fixing';
-  }
-  if (problem.templateCode && problem.testCases) {
-    return 'template_code';
   }
   if (problem.code && problem.blanks) {
     return 'cloze';
@@ -361,9 +225,6 @@ module.exports = {
   // 개별 검증 함수들 export
   validateBasicStructure,
   validateCloze,
-  validateBlockCoding,
-  validateCodeOrdering,
-  validateBugFix,
-  validateTemplateCode
+  validateBlockCoding
 };
 

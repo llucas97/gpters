@@ -1,3 +1,12 @@
+/*
+backend/services/openaiCloze.js - Cloze 문제 생성 (레벨 3-5)
+레벨 3: 1개의 핵심 키워드/메소드 블랭크
+레벨 4: 2개의 연관된 키워드/메소드 블랭크 (메소드 체이닝 우선)
+레벨 5: 3개의 연관된 키워드/메소드 블랭크 (메소드 체이닝 우선)
+코드에서 의미있는 키워드를 자동으로 찾아 블랭크 생성
+각 플레이스홀더(__1__, __2__, __3__)는 코드에서 정확히 한 번만 사용
+*/
+
 'use strict';
 
 if (!global.fetch) {
@@ -6,8 +15,8 @@ if (!global.fetch) {
 
 // === 레벨별 블랭크 후보 목록 정의 ===
 
-// 레벨 2: 핵심 기능을 담당하는 메소드, 속성, 주요 변수명 (1개)
-const LEVEL2_CANDIDATES = [
+// 레벨 3: 핵심 기능을 담당하는 메소드, 속성, 주요 변수명 (1개)
+const LEVEL3_BASE_CANDIDATES = [
   // 배열 메소드
   'length', 'map', 'filter', 'reduce', 'push', 'pop', 'sort', 
   'find', 'findIndex', 'slice', 'splice', 'includes', 'join',
@@ -32,9 +41,9 @@ const LEVEL2_CANDIDATES = [
   'return', 'break', 'continue', 'true', 'false', 'null', 'undefined'
 ];
 
-// 레벨 3: 함께 사용될 때 의미를 갖는 핵심 키워드 (2개)
-const LEVEL3_CANDIDATES = [
-  ...LEVEL2_CANDIDATES,
+// 레벨 4-5: 함께 사용될 때 의미를 갖는 핵심 키워드 (2-3개)
+const LEVEL345_CANDIDATES = [
+  ...LEVEL3_BASE_CANDIDATES,
   
   // DOM 조작
   'document', 'getElementById', 'getElementsByClassName', 'getElementsByTagName',
@@ -87,9 +96,10 @@ const LEVEL3_CANDIDATES = [
 
 // 레벨별 후보 목록 반환 함수
 function getBlankCandidates(level) {
-  // 레벨 2~3은 모두 동일한 확장된 후보 목록 사용
-  if (level === 2 || level === 3) return LEVEL3_CANDIDATES;
-  return LEVEL2_CANDIDATES; // 다른 레벨은 기본값
+  // 레벨 3은 기본 후보만, 레벨 4-5는 확장된 후보 목록 사용
+  if (level === 3) return LEVEL3_BASE_CANDIDATES;
+  if (level >= 4 && level <= 5) return LEVEL345_CANDIDATES;
+  return LEVEL3_BASE_CANDIDATES; // 다른 레벨은 기본값
 }
 
 // === 유틸: 강건 JSON 파서 + JS용 정리 ===
@@ -217,17 +227,31 @@ function escapeRegex(string) {
 function selectRandomBlanks(foundWords, level, code = '') {
   if (!foundWords || foundWords.length === 0) return [];
   
-  const blankCount = level === 2 ? 1 : level === 3 ? 2 : 1;
+  // 레벨별 블랭크 개수
+  let blankCount = 1;
+  if (level === 3) blankCount = 1;
+  else if (level === 4) blankCount = 2;
+  else if (level === 5) blankCount = 3;
   
-  // 레벨 3일 때 메소드 체이닝 패턴 우선 검토
-  if (level === 3 && blankCount === 2 && code) {
+  // 레벨 4-5일 때 메소드 체이닝 패턴 우선 검토
+  if ((level === 4 || level === 5) && blankCount >= 2 && code) {
     const candidates = getBlankCandidates(level);
     const chains = findMethodChains(code, candidates);
     
     // 메소드 체이닝이 있으면 우선 선택
     if (chains.length > 0) {
       const randomChain = chains[Math.floor(Math.random() * chains.length)];
-      return [randomChain.object, randomChain.method];
+      const selectedPairs = [randomChain.object, randomChain.method];
+      
+      // 레벨 5는 3개이므로 하나 더 추가
+      if (level === 5 && foundWords.length > 2) {
+        const remaining = foundWords.filter(w => !selectedPairs.includes(w));
+        if (remaining.length > 0) {
+          selectedPairs.push(remaining[Math.floor(Math.random() * remaining.length)]);
+        }
+      }
+      
+      return selectedPairs.slice(0, blankCount);
     }
   }
   
@@ -248,35 +272,28 @@ function applyBlanksToCode(code, selectedWords) {
   
   selectedWords.forEach((word, index) => {
     const blankId = index + 1;
-    const placeholder = `BLANK_${blankId}`;
+    const placeholder = `__${blankId}__`; // 표준 플레이스홀더 형식 사용
     
-    // 여러 패턴으로 단어 찾기 및 교체
+    // 여러 패턴으로 단어 찾기 및 교체 (첫 번째 매칭만)
     const patterns = [
       { 
-        regex: new RegExp(`\\b${escapeRegex(word)}\\b`, 'g'),
+        regex: new RegExp(`\\b${escapeRegex(word)}\\b`),  // 'g' 플래그 제거
         replacement: placeholder
       },
       { 
-        regex: new RegExp(`\\.${escapeRegex(word)}\\b`, 'g'),
+        regex: new RegExp(`\\.${escapeRegex(word)}\\b`),  // 'g' 플래그 제거
         replacement: `.${placeholder}`
       },
       { 
-        regex: new RegExp(`\\b${escapeRegex(word)}\\(`, 'g'),
+        regex: new RegExp(`\\b${escapeRegex(word)}\\(`),  // 'g' 플래그 제거
         replacement: `${placeholder}(`
       }
     ];
     
-    let replaced = false;
+    // 첫 번째 매칭만 교체 (패턴 우선순위대로 시도)
     for (const pattern of patterns) {
       if (pattern.regex.test(modifiedCode)) {
-        // 첫 번째 매칭만 교체
-        modifiedCode = modifiedCode.replace(pattern.regex, (match) => {
-          if (!replaced) {
-            replaced = true;
-            return pattern.replacement;
-          }
-          return match;
-        });
+        modifiedCode = modifiedCode.replace(pattern.regex, pattern.replacement);
         break;
       }
     }
@@ -341,6 +358,57 @@ function enforceClozeShape(result, level) {
   if (!result || typeof result !== 'object') return result;
   let code = String(result.code || '');
   
+  // 🔧 중복 플레이스홀더 제거 로직 (OpenAI가 중복 생성할 경우 대비)
+  const blankCount = level === 3 ? 1 : level === 4 ? 2 : level === 5 ? 3 : 1;
+  
+  // 코드에서 사용된 모든 플레이스홀더 ID 찾기 및 중복 재할당
+  const usedIds = new Set(); // 이미 할당된 ID 추적
+  let nextAvailableId = 1;
+  
+  // 각 플레이스홀더를 순서대로 처리
+  for (let targetId = 1; targetId <= blankCount; targetId++) {
+    const placeholder = `__${targetId}__`;
+    const regex = new RegExp(escapeRegex(placeholder), 'g');
+    const matches = code.match(regex);
+    
+    if (!matches || matches.length === 0) continue;
+    
+    if (matches.length === 1) {
+      // 중복 없음
+      usedIds.add(targetId);
+    } else {
+      // 중복 발견!
+      console.log(`[enforceClozeShape] 중복 발견: ${placeholder} (${matches.length}번 나타남)`);
+      let replacementCount = 0;
+      
+      code = code.replace(regex, (match) => {
+        replacementCount++;
+        
+        if (replacementCount === 1) {
+          // 첫 번째는 유지
+          usedIds.add(targetId);
+          return match;
+        } else {
+          // 두 번째 이후는 사용 가능한 다음 ID로 재할당
+          while (usedIds.has(nextAvailableId) && nextAvailableId <= blankCount) {
+            nextAvailableId++;
+          }
+          
+          if (nextAvailableId <= blankCount) {
+            usedIds.add(nextAvailableId);
+            const newPlaceholder = `__${nextAvailableId}__`;
+            console.log(`[enforceClozeShape] 재할당: ${placeholder} → ${newPlaceholder} (${replacementCount}번째)`);
+            return newPlaceholder;
+          } else {
+            // 블랭크 개수 초과 시 임시 식별자로 변경
+            console.log(`[enforceClozeShape] 경고: 블랭크 개수 초과, 임시 식별자 생성`);
+            return `tempId${targetId}_${replacementCount}`;
+          }
+        }
+      });
+    }
+  }
+  
   // 코드 분석 기반 블랭크 생성 (새로운 데이터 구조)
   const candidates = getBlankCandidates(level);
   const foundWords = findCandidatesInCode(code, candidates);
@@ -350,65 +418,39 @@ function enforceClozeShape(result, level) {
     const { templateCode, solutions } = applyBlanksToCode(code, selectedWords);
     return { 
       ...result, 
-      code: templateCode,           // 템플릿 코드 (BLANK_1, BLANK_2 포함)
+      code: templateCode,           // 템플릿 코드 (__1__, __2__ 포함)
       templateCode: templateCode,   // 명시적 필드명
       solutions: solutions,         // 새로운 solutions 배열 구조
-      blanks: solutions            // 기존 호환성을 위한 필드
+      blanks: solutions.map((s, i) => ({  // 기존 호환성을 위한 변환
+        id: i + 1,
+        answer: s.answer,
+        hint: s.hint
+      }))
     };
   }
   
-  // 후보가 없을 경우 기존 로직 사용 (새로운 구조로 변환)
-  const solutions = [];
+  // 후보가 없을 경우 기존 로직 사용 (표준 플레이스홀더 형식)
+  const blanks = [];
 
-  if (level === 2) {
-    // BLANK_1 하나만
-    if (!/BLANK_1/.test(code)) {
-      code = code.replace(/\b([A-Za-z_][A-Za-z0-9_]*)\b/, 'BLANK_1');
+  // 동적으로 블랭크 생성
+  for (let i = 1; i <= blankCount; i++) {
+    const placeholder = `__${i}__`;  // 표준 플레이스홀더 형식
+    if (!new RegExp(escapeRegex(placeholder)).test(code)) {
+      code = code.replace(/\b([A-Za-z_][A-Za-z0-9_]*)\b/, placeholder);
     }
-    solutions.push({ 
-      placeholder: 'BLANK_1', 
-      answer: sanitizeWord(result.blanks?.[0]?.answer) || 'identifier',
+    blanks.push({ 
+      id: i,
+      answer: sanitizeWord(result.blanks?.[i-1]?.answer) || `identifier${i}`,
       hint: '식별자(한 단어)' 
     });
-    return { 
-      ...result, 
-      code,
-      templateCode: code,
-      solutions,
-      blanks: solutions 
-    };
   }
 
-  if (level === 3) {
-    // BLANK_1, BLANK_2 두 개
-    if (!/BLANK_1/.test(code)) {
-      code = code.replace(/\b([A-Za-z_][A-Za-z0-9_]*)\b/, 'BLANK_1');
-    }
-    if (!/BLANK_2/.test(code)) {
-      code = code.replace(/\b([A-Za-z_][A-Za-z0-9_]*)\b/, 'BLANK_2');
-    }
-    solutions.push(
-      { 
-        placeholder: 'BLANK_1', 
-        answer: sanitizeWord(result.blanks?.[0]?.answer) || 'identifier1',
-        hint: '식별자(한 단어)' 
-      },
-      { 
-        placeholder: 'BLANK_2', 
-        answer: sanitizeWord(result.blanks?.[1]?.answer) || 'identifier2',
-        hint: '식별자(한 단어)' 
-      }
-    );
-    return { 
-      ...result, 
-      code,
-      templateCode: code,
-      solutions,
-      blanks: solutions 
-    };
-  }
-
-  return result;
+  return { 
+    ...result, 
+    code,
+    templateCode: code,
+    blanks 
+  };
 }
 
 function enforceLevel0Shape(result) {
@@ -448,14 +490,14 @@ module.exports = {
   replacePlaceholder,
   enforceLevel0Shape,
   
-  // 레벨 2~3 전용 유틸
+  // 레벨 3-5 전용 유틸
   sanitizeWord,
   enforceClozeShape,
   
   // 레벨별 블랭크 후보 목록
   getBlankCandidates,
-  LEVEL2_CANDIDATES,
-  LEVEL3_CANDIDATES,
+  LEVEL3_BASE_CANDIDATES,
+  LEVEL345_CANDIDATES,
   
   // 코드 분석 기반 블랭크 생성
   findCandidatesInCode,

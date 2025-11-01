@@ -88,14 +88,12 @@ function buildSystemPrompt(language) {
     '- difficulty_level: integer 1..30.',
     `- code_template: single-file starter code with placeholders EXACTLY as "__N__", using language-appropriate comments; for ${language}, use the form like: ${example}.`,
     '- blanks: array of {id:int, answer:string, hint:string} where hint is in Korean (힌트는 한국어).',
-    '- For levels 4-5: Also include templateCode (code with // BLANK_N comments) and testCases (array of {input, expected_output}).',
     'BLANK GUIDELINES BY DIFFICULTY:',
     '- Level 0: CRITICAL RULE - Use EXACTLY 2 blanks. Each blank must be ONE SINGLE WORD only (examples: x, y, let, const, +, -, console, log). NEVER use phrases like "fruit.quantity" or "if (condition)" or "totalFruits += fruit.quantity". ONLY simple words like "let" or "x" or "+".',
     '- Level 1: Use EXACTLY 3 blanks, each blank must be ONE SINGLE WORD only (like: x, +, print, if, for). NO phrases, NO expressions, ONLY individual words.',
-    '- Level 2: Use EXACTLY 1 blank, focus on meaningful programming keywords and methods (like "length", "map", "sum", "result").',
-    '- Level 3: Use EXACTLY 2 blanks, focus on meaningful programming keywords and methods (like "length", "map", "sum", "result").',
-    '- Level 4: Create template code with EXACTLY 1 blank line (marked with // BLANK_1 comment). Users will type code directly into the blank line.',
-    '- Level 5: Create template code with EXACTLY 2 blank lines (marked with // BLANK_1 and // BLANK_2 comments). Users will type code directly into the blank lines.',
+    '- Level 3: Use EXACTLY 1 blank, focus on meaningful programming keywords and methods (like "length", "map", "sum", "result").',
+    '- Level 4: Use EXACTLY 2 blanks, focus on meaningful programming keywords and methods (like "filter", "push", "response", "data").',
+    '- Level 5: Use EXACTLY 3 blanks, focus on meaningful programming keywords and methods (like "querySelector", "addEventListener", "fetch", "then").',
     '- Level 6-15: Use 3-4 blanks, mix of single words and short expressions',
     '- Level 16-25: Use 4-6 blanks, include longer expressions and logic',
     '- Level 26-30: Use 5-8 blanks, complex expressions and advanced concepts',
@@ -128,14 +126,12 @@ function userPayload({ level, topic, language }) {
     blankGuidance = `CRITICAL: Use EXACTLY 2 blanks - not 1, not 3, EXACTLY 2! Each blank must be ONE SINGLE WORD ONLY appropriate for ${language}. Examples of VALID ${language} words: ${langExamples}. DO NOT use keywords from other languages (no Python 'pass' in JavaScript, no JavaScript 'console' in Python). Examples of INVALID: "fruit.quantity", "if (N >= fruit.price)", "totalFruits += fruit.quantity". ONLY use ONE WORD per blank like "let", "x", "+", "console", "log". Create the SIMPLEST possible ${language} problem with exactly 2 single-word blanks.`;
   } else if (level === 1) {
     blankGuidance = `Use EXACTLY 3 blanks. Each blank must be ONE SINGLE WORD ONLY (${langExamples}). NO phrases like "x + 1" or "print(x)". ONLY individual words appropriate for ${language}. Create slightly more complex problems than level 0.`;
-  } else if (level === 2) {
-    blankGuidance = `Use EXACTLY 1 blank. Focus on meaningful programming keywords and methods (like "length", "map", "sum", "result"). Create problems that teach core programming concepts through key identifiers.`;
   } else if (level === 3) {
-    blankGuidance = `Use EXACTLY 2 blanks. Focus on meaningful programming keywords and methods (like "length", "map", "sum", "result"). Prefer method chaining patterns when possible (object.method). Create problems that teach core programming concepts.`;
+    blankGuidance = `Use EXACTLY 1 blank. Focus on meaningful programming keywords and methods (like "length", "map", "sum", "result"). Create problems that teach core programming concepts through key identifiers.`;
   } else if (level === 4) {
-    blankGuidance = `Create template code with EXACTLY 1 blank line marked with "// BLANK_1: [clear instruction]" comment. The blank line should require users to write 1-2 lines of meaningful ${language} code. Focus on simple but complete logic like array operations, conditional checks, or variable assignments. Provide clear test cases to validate the solution.`;
+    blankGuidance = `Use EXACTLY 2 blanks. Focus on meaningful programming keywords and methods (like "filter", "push", "response", "data"). Prefer method chaining patterns when possible (object.method). Create problems that teach core programming concepts.`;
   } else if (level === 5) {
-    blankGuidance = `Create template code with EXACTLY 2 blank lines marked with "// BLANK_1: [instruction]" and "// BLANK_2: [instruction]" comments. Each blank should require 1-2 lines of ${language} code. Create problems involving loops, conditionals, or multi-step algorithms. Provide comprehensive test cases to validate the solution.`;
+    blankGuidance = `Use EXACTLY 3 blanks. Focus on meaningful programming keywords and methods (like "querySelector", "addEventListener", "fetch", "then"). Create problems involving loops, conditionals, or multi-step algorithms.`;
   } else if (level <= 15) {
     blankGuidance = 'Use 3-4 blanks with mix of single words and short expressions.';
   } else if (level <= 25) {
@@ -155,8 +151,8 @@ async function generateProblem({ level = 10, topic = 'graph', language = 'python
   
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing');
 
-  // 레벨 2-3은 특화된 generateCloze 함수 사용
-  if (level === 2 || level === 3) {
+  // 레벨 3-5는 특화된 generateCloze 함수 사용 (키워드/메소드 방식)
+  if (level >= 3 && level <= 5) {
     console.log(`[DEBUG] Level ${level} detected - using specialized generateCloze function`);
     return await generateCloze({ level, topic, language, locale: 'ko' });
   }
@@ -205,33 +201,25 @@ async function generateProblem({ level = 10, topic = 'graph', language = 'python
   if (!Array.isArray(data.examples) || !Array.isArray(data.blanks)) throw new Error('examples/blanks must be arrays');
   
   // 레벨별 블록 개수 강제 검증
+  // 레벨 0-2는 블록코딩 시스템을 사용하므로 여기서는 검증하지 않음
   if (level === 0 && data.blanks.length !== 2) {
     throw new Error(`Level 0 must have exactly 2 blanks, got ${data.blanks.length}`);
   } else if (level === 1 && data.blanks.length !== 3) {
     throw new Error(`Level 1 must have exactly 3 blanks, got ${data.blanks.length}`);
-  } else if (level === 2 && data.blanks.length !== 1) {
-    throw new Error(`Level 2 must have exactly 1 blank, got ${data.blanks.length}`);
-  } else if (level === 3 && data.blanks.length !== 2) {
-    throw new Error(`Level 3 must have exactly 2 blanks, got ${data.blanks.length}`);
-  } else if (level === 4) {
-    // Level 4: 템플릿 코드 방식, 블랭크 검증 건너뛰기
-    if (!data.templateCode) {
-      console.warn('Level 4: templateCode is missing, using code_template as fallback');
-      data.templateCode = data.code_template || '';
-    }
-  } else if (level === 5) {
-    // Level 5: 템플릿 코드 방식, 블랭크 검증 건너뛰기
-    if (!data.templateCode) {
-      console.warn('Level 5: templateCode is missing, using code_template as fallback');
-      data.templateCode = data.code_template || '';
-    }
+  } else if (level === 3 && data.blanks.length !== 1) {
+    throw new Error(`Level 3 must have exactly 1 blank, got ${data.blanks.length}`);
+  } else if (level === 4 && data.blanks.length !== 2) {
+    throw new Error(`Level 4 must have exactly 2 blanks, got ${data.blanks.length}`);
+  } else if (level === 5 && data.blanks.length !== 3) {
+    throw new Error(`Level 5 must have exactly 3 blanks, got ${data.blanks.length}`);
   }
 
   data.blanks = data.blanks.map((b, i) => {
     const n = Number(String(b.id ?? (i + 1)).toString().replace(/\D/g, '')) || (i + 1);
     let answer = String(b.answer ?? '').trim();
     
-    // 레벨 0-1에서는 단어가 단일 단어인지 검증, 레벨 2-3은 알고리즘 로직 허용, 레벨 4-5는 템플릿 코드 방식
+    // 레벨 0-1에서는 단어가 단일 단어인지 검증, 레벨 3-5는 키워드/메소드 허용
+    // 레벨 2는 블록코딩 시스템 사용
     if (level <= 1) {
       // 공백, 특수문자, 괄호 등이 포함되어 있으면 첫 번째 단어만 추출
       const singleWord = answer.split(/[\s\(\)\[\]\{\}\+\-\*\/\=\<\>\!\&\|\,\.]+/)[0];
@@ -240,8 +228,8 @@ async function generateProblem({ level = 10, topic = 'graph', language = 'python
         answer = singleWord;
       }
       
-      // 레벨 0에서는 특히 엄격하게 검증
-      if (level === 0) {
+      // 레벨 0-1에서는 특히 엄격하게 검증
+      if (level <= 1) {
         // 언어별 허용된 단어만 사용
         let allowedWords = [];
         if (language === 'javascript') {
@@ -310,6 +298,8 @@ async function generateProblem({ level = 10, topic = 'graph', language = 'python
 
 
 async function generateCloze({ level, topic, language, locale }) {
+  console.log(`[DEBUG] generateCloze 함수 시작 - level: ${level}, topic: ${topic}, language: ${language}`);
+  
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing');
 
   const isKorean = (locale || process.env.PROBLEM_LOCALE || 'ko').toLowerCase().startsWith('ko');
@@ -317,28 +307,33 @@ async function generateCloze({ level, topic, language, locale }) {
 
   // 레벨별 블랭크 후보 목록 가져오기
   const candidates = getBlankCandidates(level);
-  const levelSpecificGuidance = level === 2 
-    ? `Level 2 (1 blank): Focus on meaningful programming keywords and methods`
-    : `Level 3 (2 blanks): Focus on meaningful programming keywords and methods`;
-
-  // 레벨 2~3에 맞는 시스템 프롬프트
+  
+  // 레벨별 블랭크 개수 및 가이드
+  const blankConfig = {
+    3: { count: 1, desc: '1 meaningful keyword/method' },
+    4: { count: 2, desc: '2 meaningful keywords/methods' },
+    5: { count: 3, desc: '3 meaningful keywords/methods' }
+  };
+  const config = blankConfig[level] || blankConfig[3];
+  
+  // 레벨 3~5에 맞는 시스템 프롬프트
   const sys = [
-    "You are an algorithm problem generator for Level 2-3 problems. Return a SINGLE JSON object and nothing else.",
+    `You are an algorithm problem generator for Level ${level} problems. Return a SINGLE JSON object and nothing else.`,
     "Do NOT include Markdown fences, comments, or extra prose.",
     // 서술 언어
     isKorean
       ? "All natural-language fields (title, statement, input_spec, output_spec, constraints, examples[].explanation) MUST be in Korean."
       : "All natural-language fields MUST be in English.",
-    // 레벨별 특화 가이드
-    levelSpecificGuidance,
     "",
-    // 레벨 2~3 핵심 규칙
-    level === 2
-      ? "CRITICAL: Level 2 requires exactly 1 blank focusing on meaningful programming keywords."
-      : "CRITICAL: Level 3 requires exactly 2 blanks focusing on meaningful programming keywords.",
+    // 레벨별 핵심 규칙
+    `CRITICAL: Level ${level} requires EXACTLY ${config.count} blank(s) focusing on meaningful programming keywords/methods.`,
     "Create blanks for essential methods (.length, .map, .push), properties (.value, .innerHTML), key variables (sum, result, count), or important keywords.",
     "Each blank should represent a meaningful programming concept that helps learning.",
-    "In field `code`, insert placeholders as plain tokens like __1__, __2__.",
+    "",
+    // 플레이스홀더 규칙 (중요!)
+    `In field \`code\`, insert placeholders as plain tokens like __1__, __2__, __3__.`,
+    `CRITICAL: Each placeholder MUST appear EXACTLY ONCE in the code. Do NOT reuse the same placeholder number.`,
+    `For example: If you use __1__, it should appear only once in the entire code.`,
     "Placeholders MUST NOT appear inside quotes or comments.",
     "Keep code identifiers/keywords in English.",
     progLang === 'javascript'
@@ -352,9 +347,8 @@ async function generateCloze({ level, topic, language, locale }) {
     `programming_language: ${progLang}`,
     `narrative_language: ${isKorean ? 'Korean' : 'English'}`,
     "",
-    level === 2 
-      ? "Create a Level 2 algorithm problem with exactly 1 meaningful blank."
-      : "Create a Level 3 algorithm problem with exactly 2 meaningful blanks.",
+    `Create a Level ${level} algorithm problem with EXACTLY ${config.count} meaningful blank(s).`,
+    `Each placeholder (__1__, __2__, __3__) must appear EXACTLY ONCE in the code.`,
     "Focus on core algorithmic concepts like loops, conditionals, and data manipulation.",
     "",
     "Blank target examples:",
@@ -403,7 +397,17 @@ async function generateCloze({ level, topic, language, locale }) {
   // 레벨별 보정
   parsed = enforceClozeShape(parsed, Number(level));
 
-  return parsed;
+  // level, topic, language 필드 추가 (데이터베이스 저장을 위해 필수)
+  const result = {
+    ...parsed,
+    level: Number(level),
+    topic: String(topic),
+    language: String(language)
+  };
+  
+  console.log(`[DEBUG] generateCloze 반환값:`, JSON.stringify(result, null, 2));
+  
+  return result;
 }
 
 module.exports = { generateProblem, generateCloze };

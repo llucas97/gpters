@@ -212,7 +212,7 @@ export default function SolvePage() {
 
       // 레벨별 API 엔드포인트 결정
       let apiEndpoint = "/api/problem-bank/generate"; // 기본값
-      if (targetLevel <= 1) {
+      if (targetLevel <= 2) {  // 레벨 0-2는 블록코딩
         apiEndpoint = "/api/block-coding/generate";
       }
       
@@ -228,7 +228,7 @@ export default function SolvePage() {
       
       // API 응답 구조에 따라 데이터 추출
       let j: Problem;
-      if (targetLevel <= 1) {
+      if (targetLevel <= 2) {  // 레벨 0-2는 블록코딩
         // 블록코딩 API: { success: true, data: problem }
         j = response.data;
       } else {
@@ -276,7 +276,7 @@ export default function SolvePage() {
             className="w-full"
           />
           <div className="text-xs text-gray-500 mt-1">
-            0-1: 블록 / 2-3: 빈칸 / 4-5: 에디터
+            0-2: 블록코딩 / 3-5: 키워드입력
           </div>
         </div>
         <div>
@@ -349,8 +349,8 @@ export default function SolvePage() {
       {/* 모드별 UI */}
       {problem && (
         <div className="mt-6 space-y-6">
-          {/* 0–1: 블록코딩(4스택) */}
-          {problem && uiLevel <= 1 && (
+          {/* 0–2: 블록코딩(드래그 앤 드롭) */}
+          {problem && uiLevel <= 2 && (
             <BlockCodingPanel
               problem={problem}
               CLIENT_ID={CLIENT_ID}
@@ -361,8 +361,8 @@ export default function SolvePage() {
             />
           )}
 
-          {/* 2–3: 빈칸채우기(3스택, 힌트 없음) */}
-          {problem && uiLevel >= 2 && uiLevel <= 3 && (
+          {/* 3-5: 빈칸채우기(키워드/메소드 입력) */}
+          {problem && uiLevel >= 3 && uiLevel <= 5 && (
             <ClozePanel
               problem={problem}
               orderedBlanks={orderedBlanks}
@@ -374,17 +374,6 @@ export default function SolvePage() {
             />
           )}
 
-          {/* 4-5: 코드 에디터(3스택: 문제 → 에디터 → 제출) */}
-          {problem && uiLevel >= 4 && (
-            <CodeEditorPanel 
-              problem={problem} 
-              CLIENT_ID={CLIENT_ID}
-              onSubmitSuccess={(problemId: number) => {
-                setLastSolvedProblemId(problemId);
-                setShowEvaluationModal(true);
-              }}
-            />
-          )}
         </div>
       )}
     </div>
@@ -530,7 +519,7 @@ function InputSlot({
           outline: "none",
           border: "none",
         }}
-        placeholder="입력..."
+        placeholder={`빈칸 ${id}`}
         autoComplete="off"
         spellCheck={false}
       />

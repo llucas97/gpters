@@ -474,3 +474,6 @@ curl -X POST http://localhost:3001/api/code-ordering/generate \
 **마지막 업데이트:** 2025-01-15  
 **상태:** ✅ 모든 서브태스크 완료
 
+
+
+
