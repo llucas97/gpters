@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const { generateBlockCodingProblem } = require('../services/openaiBlockCoding');
+const db = require('../models');
 
 /**
  * 블록코딩 문제 생성 API
@@ -40,6 +41,39 @@ router.post('/generate', async (req, res) => {
       topic: topic.trim(), 
       language: language.toLowerCase() 
     });
+    
+    // DB에 저장
+    try {
+      const savedProblem = await db.ProblemBank.create({
+        source: 'openai',
+        title: problem.title || '블록코딩 문제',
+        level: problem.level || level,
+        topic: problem.topic || topic.trim(),
+        language: problem.language || language.toLowerCase(),
+        statement: problem.description || problem.statement || '문제 설명',
+        input_spec: problem.instruction || '코드의 빈칸을 채우세요',
+        output_spec: '정답을 제출하세요',
+        constraints: JSON.stringify({
+          blankCount: problem.blankCount,
+          blocks: problem.blocks
+        }),
+        examples: JSON.stringify([]),
+        code: problem.completeCode || problem.code || problem.blankedCode,
+        blanks: JSON.stringify({
+          blankedCode: problem.blankedCode,
+          keywordsToBlank: problem.keywordsToBlank,
+          blocks: problem.blocks
+        })
+      });
+      
+      // 생성된 문제에 DB ID 추가
+      problem.id = savedProblem.id;
+      
+      console.log(`[BlockCoding] 문제 DB 저장 완료: ID ${savedProblem.id}`);
+    } catch (saveError) {
+      console.error('[BlockCoding] DB 저장 실패:', saveError);
+      // DB 저장 실패해도 문제는 반환
+    }
     
     res.json({
       success: true,

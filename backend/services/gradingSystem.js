@@ -124,7 +124,7 @@ class GradingSystem {
       console.log('[GradingSystem] 문제:', problem.title);
       console.log('[GradingSystem] 사용자 답안:', userAnswer);
       
-      const { templateCode, solutions } = problem;
+      const { templateCode, solutions, blocks, keywordsToBlank } = problem;
       const { userAnswers } = userAnswer; // 사용자가 입력한 답안들
       
       if (!userAnswers || !Array.isArray(userAnswers)) {
@@ -136,19 +136,36 @@ class GradingSystem {
         };
       }
       
+      // solutions 또는 blocks/keywordsToBlank 사용
+      let correctAnswers;
+      if (solutions && Array.isArray(solutions)) {
+        correctAnswers = solutions.map(s => s.answer);
+      } else if (blocks && Array.isArray(blocks)) {
+        correctAnswers = blocks.filter(b => b.type === 'answer').map(b => b.text);
+      } else if (keywordsToBlank && Array.isArray(keywordsToBlank)) {
+        correctAnswers = keywordsToBlank;
+      } else {
+        return {
+          success: false,
+          error: '문제 정보가 올바르지 않습니다 (solutions, blocks, keywordsToBlank 중 하나 필요)',
+          score: 0,
+          isCorrect: false
+        };
+      }
+      
       let correctCount = 0;
-      const totalBlanks = solutions.length;
+      const totalBlanks = correctAnswers.length;
       const results = [];
       
       // 각 빈칸에 대해 사용자 답안 확인
       for (let i = 0; i < totalBlanks; i++) {
-        const solution = solutions[i];
+        const correctAnswer = correctAnswers[i];
         const userAnswer = userAnswers[i];
         
         if (!userAnswer) {
           results.push({
             blankId: i + 1,
-            correctAnswer: solution.answer,
+            correctAnswer: correctAnswer,
             userAnswer: null,
             isCorrect: false,
             feedback: '답안이 없습니다'
@@ -156,17 +173,17 @@ class GradingSystem {
           continue;
         }
         
-        const isCorrect = this.compareAnswers(solution.answer, userAnswer);
+        const isCorrect = this.compareAnswers(correctAnswer, userAnswer);
         if (isCorrect) {
           correctCount++;
         }
         
         results.push({
           blankId: i + 1,
-          correctAnswer: solution.answer,
+          correctAnswer: correctAnswer,
           userAnswer,
           isCorrect,
-          feedback: isCorrect ? '정답입니다!' : `틀렸습니다. 정답은 "${solution.answer}"입니다.`
+          feedback: isCorrect ? '정답입니다!' : `틀렸습니다. 정답은 "${correctAnswer}"입니다.`
         });
       }
       

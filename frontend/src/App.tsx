@@ -8,7 +8,6 @@ import ProfilePage from "./pages/ProfilePage";
 import SurveyPage from "./pages/SurveyPage";
 import LevelTestPage from "./pages/LevelTestPage";
 import DashboardPage from "./pages/DashboardPage";
-import SolvePage from "./pages/SolvePage";
 import SolvedPage from "./pages/SolvedPage";
 import UserStatsPage from "./pages/UserStatsPage";
 
@@ -29,7 +28,7 @@ function App() {
             <Route path="/problems" element={<DashboardPage />} />
             <Route path="/quiz" element={<Navigate to="/solve" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/solve" element={<SolvePage />} />
+            <Route path="/solve" element={<SolvedPage />} />
             <Route path="/solved" element={<SolvedPage />} />
             <Route path="/stats" element={<UserStatsPage />} />
           </Routes>

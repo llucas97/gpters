@@ -7,12 +7,13 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
-    userId: {
+    user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      field: 'user_id',
       references: {
-        model: 'Users',
-        key: 'id'
+        model: 'users',
+        key: 'user_id'
       },
       comment: '사용자 ID'
     },
@@ -99,12 +100,13 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     tableName: 'user_experience',
     timestamps: true,
+    underscored: false,
     indexes: [
-      { fields: ['userId'] },
+      { fields: ['user_id'] },
       { fields: ['level'] },
       { fields: ['totalExperience'] },
       { fields: ['lastLevelUpAt'] },
-      { fields: ['userId', 'level'] }
+      { fields: ['user_id', 'level'] }
     ]
   });
 
@@ -112,7 +114,8 @@ module.exports = (sequelize, DataTypes) => {
   UserExperience.associate = (models) => {
     // 사용자와의 관계
     UserExperience.belongsTo(models.User, {
-      foreignKey: 'userId',
+      foreignKey: 'user_id',
+      targetKey: 'user_id',
       as: 'user'
     });
   };

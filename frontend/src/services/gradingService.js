@@ -12,11 +12,13 @@ class GradingService {
    * @param {Object} problem - 문제 정보
    * @param {Array} userBlocks - 사용자가 드래그한 블록들
    * @param {number} level - 레벨 (선택사항)
+   * @param {string} userId - 사용자 ID
+   * @param {number} timeSpent - 소요 시간 (초)
    * @returns {Promise<Object>} 채점 결과
    */
-  static async gradeBlockCoding(problem, userBlocks, level = 0) {
+  static async gradeBlockCoding(problem, userBlocks, level = 0, userId = null, timeSpent = 0) {
     try {
-      console.log('[GradingService] 블록코딩 채점 요청:', { problem: problem.title, userBlocks });
+      console.log('[GradingService] 블록코딩 채점 요청:', { problem: problem.title, userBlocks, userId, timeSpent });
       
       const response = await fetch(`${API_BASE_URL}/api/grading/grade`, {
         method: 'POST',
@@ -28,7 +30,9 @@ class GradingService {
           problemType: 'block',
           problem,
           userAnswer: { userBlocks },
-          level
+          level,
+          userId,
+          timeSpent
         })
       });
       
@@ -57,11 +61,13 @@ class GradingService {
    * @param {Object} problem - 문제 정보
    * @param {Array} userAnswers - 사용자가 입력한 답안들
    * @param {number} level - 레벨 (선택사항)
+   * @param {string} userId - 사용자 ID
+   * @param {number} timeSpent - 소요 시간 (초)
    * @returns {Promise<Object>} 채점 결과
    */
-  static async gradeClozeTest(problem, userAnswers, level = 0) {
+  static async gradeClozeTest(problem, userAnswers, level = 0, userId = null, timeSpent = 0) {
     try {
-      console.log('[GradingService] 빈칸채우기 채점 요청:', { problem: problem.title, userAnswers });
+      console.log('[GradingService] 빈칸채우기 채점 요청:', { problem: problem.title, userAnswers, userId, timeSpent });
       
       const response = await fetch(`${API_BASE_URL}/api/grading/grade`, {
         method: 'POST',
@@ -73,7 +79,9 @@ class GradingService {
           problemType: 'cloze',
           problem,
           userAnswer: { userAnswers },
-          level
+          level,
+          userId,
+          timeSpent
         })
       });
       
@@ -169,9 +177,10 @@ class GradingService {
    * @param {Object} problem - 문제 정보
    * @param {Object} userAnswer - 사용자 답안
    * @param {number} level - 레벨 (선택사항)
+   * @param {string} userId - 사용자 ID
    * @returns {Promise<Object>} 채점 결과
    */
-  static async grade(problem, userAnswer, level = 0) {
+  static async grade(problem, userAnswer, level = 0, userId = null) {
     try {
       // 문제 유형 자동 감지
       let problemType = 'cloze'; // 기본값
@@ -185,7 +194,8 @@ class GradingService {
       console.log('[GradingService] 통합 채점:', { 
         problemType, 
         problem: problem.title, 
-        level 
+        level,
+        userId
       });
       
       const response = await fetch(`${API_BASE_URL}/api/grading/grade`, {
@@ -198,7 +208,8 @@ class GradingService {
           problemType,
           problem,
           userAnswer,
-          level
+          level,
+          userId
         })
       });
       

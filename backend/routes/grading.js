@@ -76,34 +76,51 @@ router.post('/grade', async (req, res) => {
         });
 
         // 경험치 추가
+        console.log('[Grading API] 경험치 추가 시도:', {
+          userId: req.body.userId,
+          hasUserId: !!req.body.userId,
+          level: level || problem.level || 0,
+          problemType: problemType,
+          score: response.score
+        });
+        
         try {
-          const experienceData = {
-            level: level || problem.level || 0,
-            problemType: problemType,
-            score: response.score,
-            isCorrect: response.isCorrect,
-            isFirstAttempt: saveResult.isFirstAttempt,
-            timeSpent: req.body.timeSpent || 0
-          };
-
-          const experienceResult = await UserExperienceService.addExperienceFromProblem(req.body.userId, experienceData);
-          
-          if (experienceResult.success) {
-            response.experience = {
-              gained: experienceResult.data.gainedExperience,
-              leveledUp: experienceResult.data.leveledUp,
-              newLevel: experienceResult.data.level,
-              levelUpReward: experienceResult.data.levelUpReward
+          if (!req.body.userId) {
+            console.warn('[Grading API] userId가 없어서 경험치를 추가할 수 없습니다');
+          } else {
+            const experienceData = {
+              level: level || problem.level || 0,
+              problemType: problemType,
+              score: response.score,
+              isCorrect: response.isCorrect,
+              isFirstAttempt: saveResult.isFirstAttempt,
+              timeSpent: req.body.timeSpent || 0
             };
+
+            const experienceResult = await UserExperienceService.addExperienceFromProblem(req.body.userId, experienceData);
             
-            console.log('[Grading API] 경험치 추가 완료:', {
-              gained: experienceResult.data.gainedExperience,
-              leveledUp: experienceResult.data.leveledUp,
-              newLevel: experienceResult.data.level
-            });
+            console.log('[Grading API] 경험치 추가 결과:', experienceResult);
+            
+            if (experienceResult.success) {
+              response.experience = {
+                gained: experienceResult.data.gainedExperience,
+                leveledUp: experienceResult.data.leveledUp,
+                newLevel: experienceResult.data.level,
+                levelUpReward: experienceResult.data.levelUpReward
+              };
+              
+              console.log('[Grading API] 경험치 추가 완료:', {
+                gained: experienceResult.data.gainedExperience,
+                leveledUp: experienceResult.data.leveledUp,
+                newLevel: experienceResult.data.level
+              });
+            } else {
+              console.error('[Grading API] 경험치 추가 실패 (success: false):', experienceResult.error);
+            }
           }
         } catch (expError) {
-          console.error('[Grading API] 경험치 추가 실패:', expError);
+          console.error('[Grading API] 경험치 추가 예외:', expError);
+          console.error('[Grading API] 스택 트레이스:', expError.stack);
           // 경험치 추가 실패는 채점 결과에 영향을 주지 않음
         }
         

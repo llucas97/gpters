@@ -159,6 +159,13 @@ module.exports = (sequelize, DataTypes) => {
         as: 'statistics',
       });
     }
+    if (models.UserExperience) {
+      User.hasOne(models.UserExperience, {
+        foreignKey: 'user_id',
+        sourceKey: 'user_id',
+        as: 'experience',
+      });
+    }
   };
 
   return User;

@@ -9,15 +9,22 @@ class ExperienceSystem {
   /**
    * 레벨별 최대 경험치 계산 (지수 분배)
    * @param {number} level - 레벨
-   * @returns {number} 해당 레벨까지 필요한 총 경험치
+   * @returns {number} 해당 레벨까지 필요한 총 누적 경험치
    */
   static calculateMaxExperience(level) {
     if (level <= 0) return 0;
-    if (level === 1) return 100; // 레벨 1까지는 100 경험치
     
     // 지수 분배: 각 레벨마다 필요한 경험치가 2배씩 증가
-    // 레벨 1: 100, 레벨 2: 200, 레벨 3: 400, 레벨 4: 800, ...
-    return 100 * Math.pow(2, level - 1);
+    // 레벨 1: 100 (누적 100)
+    // 레벨 2: 200 (누적 300 = 100 + 200)
+    // 레벨 3: 400 (누적 700 = 100 + 200 + 400)
+    // 레벨 4: 800 (누적 1500 = 100 + 200 + 400 + 800)
+    
+    let totalExp = 0;
+    for (let i = 1; i <= level; i++) {
+      totalExp += 100 * Math.pow(2, i - 1);
+    }
+    return totalExp;
   }
   
   /**
@@ -38,26 +45,31 @@ class ExperienceSystem {
    */
   static calculateLevelFromExperience(totalExperience) {
     let level = 1;
-    let currentExp = totalExperience;
     
-    // 각 레벨의 최대 경험치를 확인하여 현재 레벨 계산
-    while (currentExp >= this.calculateMaxExperience(level + 1)) {
+    // 각 레벨의 누적 최대 경험치를 확인하여 현재 레벨 계산
+    // totalExperience가 현재 레벨의 최대치를 넘으면 레벨업
+    while (totalExperience >= this.calculateMaxExperience(level)) {
       level++;
     }
+    level--; // 한 단계 초과했으므로 되돌림
     
-    const currentLevelMaxExp = this.calculateMaxExperience(level);
-    const nextLevelMaxExp = this.calculateMaxExperience(level + 1);
-    const currentLevelExp = currentExp - currentLevelMaxExp;
-    const expToNextLevel = nextLevelMaxExp - currentExp;
+    if (level < 1) level = 1; // 최소 레벨 1
+    
+    // 현재 레벨의 시작 경험치 (이전 레벨까지의 총 경험치)
+    const currentLevelStartExp = level === 1 ? 0 : this.calculateMaxExperience(level - 1);
+    const nextLevelMaxExp = this.calculateMaxExperience(level);
+    const currentLevelExp = totalExperience - currentLevelStartExp;
+    const expToNextLevel = nextLevelMaxExp - totalExperience;
+    const levelExpRequired = nextLevelMaxExp - currentLevelStartExp;
     
     return {
       level,
       currentLevelExp,
       expToNextLevel,
       totalExperience,
-      currentLevelMaxExp,
+      currentLevelMaxExp: currentLevelStartExp,
       nextLevelMaxExp,
-      progressPercentage: Math.round((currentLevelExp / (nextLevelMaxExp - currentLevelMaxExp)) * 100)
+      progressPercentage: Math.max(0, Math.min(100, Math.round((currentLevelExp / levelExpRequired) * 100)))
     };
   }
   

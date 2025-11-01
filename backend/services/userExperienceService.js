@@ -18,13 +18,13 @@ class UserExperienceService {
       console.log('[UserExperienceService] 사용자 경험치 정보 조회:', { userId });
       
       let userExp = await UserExperience.findOne({
-        where: { userId }
+        where: { user_id: userId }
       });
       
       // 경험치 정보가 없으면 새로 생성
       if (!userExp) {
         userExp = await UserExperience.create({
-          userId,
+          user_id: userId,
           totalExperience: 0,
           level: 1,
           currentLevelExp: 0,
@@ -47,7 +47,7 @@ class UserExperienceService {
         success: true,
         data: {
           id: userExp.id,
-          userId: userExp.userId,
+          userId: userExp.user_id,
           totalExperience: userExp.totalExperience,
           level: levelInfo.level,
           currentLevelExp: levelInfo.currentLevelExp,
@@ -137,7 +137,7 @@ class UserExperienceService {
       
       // 데이터베이스 업데이트
       await UserExperience.update(updateData, {
-        where: { userId }
+        where: { user_id: userId }
       });
       
       console.log('[UserExperienceService] 경험치 업데이트 완료:', {
@@ -187,7 +187,7 @@ class UserExperienceService {
           {
             model: require('../models').User,
             as: 'user',
-            attributes: ['id', 'username', 'email']
+            attributes: ['user_id', 'username', 'email']
           }
         ]
       });
@@ -196,8 +196,8 @@ class UserExperienceService {
         success: true,
         data: rankings.map((rank, index) => ({
           rank: index + 1,
-          userId: rank.userId,
-          username: rank.user?.username || `User${rank.userId}`,
+          userId: rank.user_id,
+          username: rank.user?.username || `User${rank.user_id}`,
           level: rank.level,
           totalExperience: rank.totalExperience,
           highestLevel: rank.highestLevel
@@ -292,7 +292,7 @@ class UserExperienceService {
         experienceHistory: [],
         lastExperienceReset: new Date()
       }, {
-        where: { userId }
+        where: { user_id: userId }
       });
       
       return {

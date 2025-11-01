@@ -1,29 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import GradingService from "../services/gradingService";
 
-// ===== client id =====
-const getClientId = (): string => {
-  const KEY = "gpters.clientId";
-  const stored =
-    typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
-  if (stored) return stored;
-
-  const rand = (n = 8) =>
-    Math.random()
-      .toString(36)
-      .slice(2, 2 + n);
-  // globalThis.crypto?.randomUUID() 가 있으면 사용, 없으면 fallback
-  const newId =
-    (typeof globalThis !== "undefined" &&
-      (globalThis as any).crypto?.randomUUID?.()) ||
-    `${rand(6)}-${Date.now().toString(36)}-${rand(6)}`;
-
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem(KEY, newId); // newId는 string 확정
-  }
-  return newId;
-};
-
-const CLIENT_ID = getClientId(); // eslint-disable-line @typescript-eslint/no-unused-vars
+// ===== client id ===== (Not used in current implementation)
+// const getClientId = (): string => {
+//   const KEY = "gpters.clientId";
+//   const stored =
+//     typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
+//   if (stored) return stored;
+//
+//   const rand = (n = 8) =>
+//     Math.random()
+//       .toString(36)
+//       .slice(2, 2 + n);
+//   // globalThis.crypto?.randomUUID() 가 있으면 사용, 없으면 fallback
+//   const newId =
+//     (typeof globalThis !== "undefined" &&
+//       (globalThis as any).crypto?.randomUUID?.()) ||
+//     `${rand(6)}-${Date.now().toString(36)}-${rand(6)}`;
+//
+//   if (typeof localStorage !== "undefined") {
+//     localStorage.setItem(KEY, newId); // newId는 string 확정
+//   }
+//   return newId;
+// };
+//
+// const CLIENT_ID = getClientId(); // Not used in current implementation
 
 // 구문 강조 컴포넌트
 const SyntaxHighlight = ({ code }: { code: string }) => {
@@ -200,7 +202,7 @@ type Problem = {
   blankedCode?: string;
   templateCode?: string;
   blocks?: Array<{
-    id: number;
+    id: string | number;
     text: string;
     type: 'answer' | 'distractor';
   }>;
@@ -222,16 +224,28 @@ type GradingResult = {
 };
 
 export default function SolvedPage() {
+  const { user } = useAuth(); // 사용자 정보 가져오기
   const [uiLevel, setUiLevel] = useState<number>(2); // 0-5
   const [language, setLanguage] = useState<string>("javascript");
   const [loading, setLoading] = useState<boolean>(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string>("");
+  const [startTime, setStartTime] = useState<number>(0); // 문제 시작 시간
   
   // 모달 관련 상태
   const [showResultModal, setShowResultModal] = useState<boolean>(false);
   const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
+
+  // 사용자 레벨에 맞춰 UI Level 자동 설정
+  useEffect(() => {
+    if (user?.current_level !== undefined && user?.current_level !== null) {
+      // 사용자 레벨을 0-5 범위로 제한
+      const userLevel = Math.max(0, Math.min(5, user.current_level));
+      setUiLevel(userLevel);
+      console.log(`사용자 레벨 ${user.current_level}에 맞춰 UI Level을 ${userLevel}로 설정`);
+    }
+  }, [user?.current_level]);
 
   // 문제 생성 함수 - 모든 레벨에서 블록코딩 API 사용, UI만 다르게
   const handleGenerateProblem = async () => {
@@ -267,6 +281,7 @@ export default function SolvedPage() {
       
       setProblem(problemData);
       setUserAnswers({});
+      setStartTime(Date.now()); // 문제 시작 시간 기록
       
     } catch (error: any) {
       setErr(String(error?.message || error));
@@ -301,12 +316,12 @@ export default function SolvedPage() {
     });
   };
 
-  // 제출하기 - 모든 레벨에서 블록코딩 검증 API 사용
+  // 제출하기 - 실제 채점 API 사용
   const handleSubmit = async () => {
     if (!problem) return;
     
     const blankCount = problem.blankCount || problem.blanks?.length || 1;
-    const userAnswersArray = [];
+    const userAnswersArray: string[] = [];
     
     for (let i = 1; i <= blankCount; i++) {
       userAnswersArray.push(userAnswers[i] || "");
@@ -319,70 +334,57 @@ export default function SolvedPage() {
       return;
     }
     
-    const body = {
-      problem,
-      userAnswers: userAnswersArray
-    };
-    
     try {
-      const r = await fetch("/api/block-coding/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+      // GradingService를 사용하여 실제 채점 (userId 포함)
+      const userId = user?.id?.toString();
+      const timeSpent = startTime > 0 ? Math.floor((Date.now() - startTime) / 1000) : 0; // 초 단위
+      
+      console.log('[SolvedPage] 채점 제출:', {
+        userId,
+        problemTitle: problem.title,
+        userAnswersCount: userAnswersArray.length,
+        timeSpent: `${timeSpent}초`
       });
-      if (!r.ok) throw new Error(await r.text());
       
-      // TODO: API 연결 시 실제 채점 결과 사용
-      // const result = await r.json();
-      // const apiResult = result.data;
-      // setGradingResult(apiResult);
+      const result: any = await GradingService.gradeClozeTest(
+        problem,
+        userAnswersArray,
+        problem.level || uiLevel,
+        userId,
+        timeSpent
+      );
       
-      // 현재는 임시로 프론트엔드에서 채점 (나중에 제거)
-      const mockGradingResult = generateMockGrading(problem, userAnswers);
-      setGradingResult(mockGradingResult);
-      setShowResultModal(true);
+      if (result.success) {
+        // API 응답을 GradingResult 형식으로 변환
+        const gradingData: GradingResult = {
+          isCorrect: result.isCorrect,
+          score: result.score,
+          totalBlanks: result.totalCount || blankCount,
+          correctBlanks: result.correctCount || 0,
+          details: (result.results || []).map((r: any, idx: number) => ({
+            blankId: idx + 1,
+            userAnswer: userAnswersArray[idx] || "",
+            correctAnswer: r.correctAnswer || r.expected || "",
+            isCorrect: r.isCorrect || false
+          }))
+        };
+        
+        setGradingResult(gradingData);
+        setShowResultModal(true);
+        
+        console.log('[SolvedPage] 채점 성공:', {
+          score: result.score,
+          isCorrect: result.isCorrect,
+          experience: result.experience
+        });
+      } else {
+        throw new Error(result.error || '채점에 실패했습니다');
+      }
       
     } catch (error: any) {
-      // API가 없을 때를 대비한 임시 채점
-      console.warn("API 호출 실패, 임시 채점 사용:", error);
-      const mockGradingResult = generateMockGrading(problem, userAnswers);
-      setGradingResult(mockGradingResult);
-      setShowResultModal(true);
+      console.error("[SolvedPage] 채점 오류:", error);
+      alert(`채점 중 오류가 발생했습니다: ${error.message}`);
     }
-  };
-  
-  // 임시 채점 함수 - 블록코딩 방식 (모든 레벨)
-  const generateMockGrading = (prob: Problem, answers: Record<number, string>): GradingResult => {
-    const blankCount = prob.blankCount || 1;
-    const correctAnswers = prob.blocks?.filter(b => b.type === 'answer').map(b => b.text) || [];
-    
-    const details = [];
-    let correctCount = 0;
-    
-    for (let i = 1; i <= blankCount; i++) {
-      const userAns = answers[i] || "";
-      const correctAns = correctAnswers[i - 1] || "정답 없음";
-      const isCorrect = userAns === correctAns;
-      
-      if (isCorrect) correctCount++;
-      
-      details.push({
-        blankId: i,
-        userAnswer: userAns,
-        correctAnswer: correctAns,
-        isCorrect
-      });
-    }
-    
-    const score = Math.round((correctCount / blankCount) * 100);
-    
-    return {
-      isCorrect: correctCount === blankCount,
-      score,
-      totalBlanks: blankCount,
-      correctBlanks: correctCount,
-      details
-    };
   };
   
   // 다시 풀기
@@ -441,6 +443,11 @@ export default function SolvedPage() {
                     </div>
                     <small className="text-muted">
                       0-2: 드래그 앤 드롭 / 3-5: 키보드 직접 입력
+                      {user && (
+                        <span className="ms-2 text-primary fw-semibold">
+                          (내 레벨: {user.current_level ?? 0})
+                        </span>
+                      )}
                     </small>
                   </div>
 
