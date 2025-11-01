@@ -6,6 +6,11 @@ if (!global.fetch) {
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL   = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
+// 디버깅: 환경 변수 확인
+console.log('🔍 OPENAI_API_KEY 확인:', OPENAI_API_KEY ? 'Found' : 'Missing');
+console.log('🔍 OPENAI_API_KEY 길이:', OPENAI_API_KEY ? OPENAI_API_KEY.length : 0);
+console.log('🔍 모든 환경 변수:', Object.keys(process.env).filter(key => key.includes('OPENAI')));
+
 // Cloze 전용 유틸리티 함수들 import
 const { 
   enforceLevel0Shape, 

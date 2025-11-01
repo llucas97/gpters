@@ -24,17 +24,17 @@ router.get('/:userId/overview', async (req, res) => {
     const additionalStats = {
       totalProblems: stats.totalProblems,
       correctProblems: stats.correctProblems,
-      accuracy: stats.accuracy,
-      averageScore: stats.averageScore,
-      averageAccuracy: stats.averageAccuracy,
+      accuracy: Number(Number(stats.accuracy || 0).toFixed(1)),
+      averageScore: Number(Number(stats.averageScore || 0).toFixed(1)),
+      averageAccuracy: Number(Number(stats.averageAccuracy || 0).toFixed(1)),
       
       // 레벨별 통계
       levelBreakdown: stats.levelStats.map(level => ({
         level: level.level,
         totalProblems: parseInt(level.totalCount),
         correctProblems: parseInt(level.correctCount),
-        accuracy: level.totalCount > 0 ? (level.correctCount / level.totalCount) * 100 : 0,
-        averageScore: parseFloat(level.avgScore) || 0
+        accuracy: Number((level.totalCount > 0 ? (level.correctCount / level.totalCount) * 100 : 0).toFixed(1)),
+        averageScore: Number((parseFloat(level.avgScore) || 0).toFixed(1))
       })),
       
       // 문제 유형별 통계
@@ -42,8 +42,8 @@ router.get('/:userId/overview', async (req, res) => {
         problemType: type.problem_type,
         totalProblems: parseInt(type.totalCount),
         correctProblems: parseInt(type.correctCount),
-        accuracy: type.totalCount > 0 ? (type.correctCount / type.totalCount) * 100 : 0,
-        averageScore: parseFloat(type.avgScore) || 0
+        accuracy: Number((type.totalCount > 0 ? (type.correctCount / type.totalCount) * 100 : 0).toFixed(1)),
+        averageScore: Number((parseFloat(type.avgScore) || 0).toFixed(1))
       })),
       
       // Topic별 통계 추가
@@ -107,8 +107,8 @@ router.get('/:userId/level/:level', async (req, res) => {
       level: parseInt(level),
       totalProblems: result.totalCount,
       correctProblems: result.records.filter(r => r.is_correct).length,
-      accuracy: result.totalCount > 0 ? (result.records.filter(r => r.is_correct).length / result.totalCount) * 100 : 0,
-      averageScore: result.records.reduce((sum, r) => sum + (r.score || 0), 0) / result.totalCount || 0,
+      accuracy: Number((result.totalCount > 0 ? (result.records.filter(r => r.is_correct).length / result.totalCount) * 100 : 0).toFixed(1)),
+      averageScore: Number((result.records.reduce((sum, r) => sum + (r.score || 0), 0) / result.totalCount || 0).toFixed(1)),
       
       // 문제 유형별 분석
       typeAnalysis: analyzeByType(result.records),
@@ -169,8 +169,8 @@ router.get('/:userId/type/:problemType', async (req, res) => {
       problemType,
       totalProblems: result.totalCount,
       correctProblems: result.records.filter(r => r.is_correct).length,
-      accuracy: result.totalCount > 0 ? (result.records.filter(r => r.is_correct).length / result.totalCount) * 100 : 0,
-      averageScore: result.records.reduce((sum, r) => sum + (r.score || 0), 0) / result.totalCount || 0,
+      accuracy: Number((result.totalCount > 0 ? (result.records.filter(r => r.is_correct).length / result.totalCount) * 100 : 0).toFixed(1)),
+      averageScore: Number((result.records.reduce((sum, r) => sum + (r.score || 0), 0) / result.totalCount || 0).toFixed(1)),
       
       // 레벨별 분석
       levelAnalysis: analyzeByLevel(result.records),
@@ -245,6 +245,7 @@ router.get('/:userId/achievements', async (req, res) => {
  * 최근 활동 조회
  */
 async function getRecentActivity(userId, days) {
+<<<<<<< HEAD
   try {
     // userId를 문자열로 변환
     const userIdString = String(userId);
@@ -308,6 +309,25 @@ async function getRecentActivity(userId, days) {
       averageScore: 0
     };
   }
+=======
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  
+  const options = {
+    startDate: startDate.toISOString().split('T')[0],
+    endDate: endDate.toISOString().split('T')[0]
+  };
+  
+  const result = await GradingResultService.getUserProblemHistory(userId, options);
+  
+  return {
+    period: `${days}일`,
+    totalProblems: result.totalCount,
+    correctProblems: result.records.filter(r => r.is_correct).length,
+    averageScore: Number((result.records.reduce((sum, r) => sum + (r.score || 0), 0) / result.totalCount || 0).toFixed(1))
+  };
+>>>>>>> 7c35fb6d82bc4e54a9132af7aaf2a11be75fb65f
 }
 
 /**
@@ -341,8 +361,8 @@ function analyzeByType(records) {
     problemType: type,
     totalProblems: typeMap[type].total,
     correctProblems: typeMap[type].correct,
-    accuracy: typeMap[type].total > 0 ? (typeMap[type].correct / typeMap[type].total) * 100 : 0,
-    averageScore: typeMap[type].total > 0 ? typeMap[type].totalScore / typeMap[type].total : 0
+    accuracy: Number((typeMap[type].total > 0 ? (typeMap[type].correct / typeMap[type].total) * 100 : 0).toFixed(1)),
+    averageScore: Number((typeMap[type].total > 0 ? typeMap[type].totalScore / typeMap[type].total : 0).toFixed(1))
   }));
 }
 
@@ -366,8 +386,8 @@ function analyzeByLevel(records) {
     level: parseInt(level),
     totalProblems: levelMap[level].total,
     correctProblems: levelMap[level].correct,
-    accuracy: levelMap[level].total > 0 ? (levelMap[level].correct / levelMap[level].total) * 100 : 0,
-    averageScore: levelMap[level].total > 0 ? levelMap[level].totalScore / levelMap[level].total : 0
+    accuracy: Number((levelMap[level].total > 0 ? (levelMap[level].correct / levelMap[level].total) * 100 : 0).toFixed(1)),
+    averageScore: Number((levelMap[level].total > 0 ? levelMap[level].totalScore / levelMap[level].total : 0).toFixed(1))
   }));
 }
 
@@ -393,8 +413,8 @@ function analyzeByTime(records) {
     timeSlot: `${timeSlot}:00-${parseInt(timeSlot) + 4}:00`,
     totalProblems: timeMap[timeSlot].total,
     correctProblems: timeMap[timeSlot].correct,
-    accuracy: timeMap[timeSlot].total > 0 ? (timeMap[timeSlot].correct / timeMap[timeSlot].total) * 100 : 0,
-    averageScore: timeMap[timeSlot].total > 0 ? timeMap[timeSlot].totalScore / timeMap[timeSlot].total : 0
+    accuracy: Number((timeMap[timeSlot].total > 0 ? (timeMap[timeSlot].correct / timeMap[timeSlot].total) * 100 : 0).toFixed(1)),
+    averageScore: Number((timeMap[timeSlot].total > 0 ? timeMap[timeSlot].totalScore / timeMap[timeSlot].total : 0).toFixed(1))
   }));
 }
 

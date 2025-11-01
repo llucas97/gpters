@@ -10,7 +10,7 @@ const HomePage = () => {
           <div className="hero-section text-center">
             <h1 className="hero-title">
               {isAuthenticated ? (
-                <>안녕하세요, {user?.username}님! 🚀</>
+                <>{user?.username}님 환영합니다! 🚀</>
               ) : (
                 <>Gpters에 오신 것을 환영합니다! 🚀</>
               )}

@@ -1,10 +1,9 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+require('dotenv').config();
 
 const cors = require('cors');
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
-require('dotenv').config();
 const path = require('path');
 const initPassport = require('./auth/passport');
 const localAuthRoutes = require('./routes/localAuth');

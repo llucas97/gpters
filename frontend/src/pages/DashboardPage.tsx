@@ -68,9 +68,6 @@ const DashboardPage: React.FC = () => {
         <div className="col-12">
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h1>💡 문제 풀이</h1>
-            <div className="text-muted">
-              안녕하세요, {user?.username}님!
-            </div>
           </div>
         </div>
 
@@ -196,7 +193,7 @@ const DashboardPage: React.FC = () => {
                             <div className="border rounded p-2 small">
                               <div className="fw-bold">레벨 {level.level}</div>
                               <div className="text-muted">
-                                정답: {level.correct}/{level.total} ({level.successRate}%)
+                                정답: {level.correct}/{level.total} ({level.successRate.toFixed(1)}%)
                               </div>
                             </div>
                           </div>
